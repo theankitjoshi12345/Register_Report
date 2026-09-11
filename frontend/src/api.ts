@@ -1,6 +1,9 @@
 import { flattenErrors } from './report'
 import type { FieldErrors } from './report'
 
+const runtimeEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {}
+const configuredApiBase = (runtimeEnv.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
+
 export class ApiError extends Error {
   status: number
   errors: FieldErrors
@@ -14,7 +17,8 @@ export class ApiError extends Error {
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   let response: Response
   try {
-    response = await fetch(url, { credentials: 'same-origin', ...options })
+    const target = /^https?:\/\//.test(url) ? url : `${configuredApiBase}${url}`
+    response = await fetch(target, { credentials: configuredApiBase ? 'include' : 'same-origin', ...options })
   } catch {
     throw new ApiError('The report service is unavailable. Check your connection and try again.')
   }

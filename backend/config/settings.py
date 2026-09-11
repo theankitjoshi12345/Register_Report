@@ -21,6 +21,8 @@ ALLOWED_HOSTS = env.list(
     default=["localhost", "127.0.0.1", "[::1]"] if DEBUG else [],
 )
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
+CROSS_SITE_COOKIES = env.bool("DJANGO_CROSS_SITE_COOKIES", default=False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -35,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "stores.cors.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -90,6 +93,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CSRF_FAILURE_VIEW = "stores.views.csrf_failure"
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "None" if CROSS_SITE_COOKIES else "Lax"
 SESSION_COOKIE_SECURE = env.bool("DJANGO_SECURE_COOKIES", default=not DEBUG)
+CSRF_COOKIE_SAMESITE = "None" if CROSS_SITE_COOKIES else "Lax"
 CSRF_COOKIE_SECURE = env.bool("DJANGO_SECURE_COOKIES", default=not DEBUG)

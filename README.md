@@ -196,6 +196,30 @@ a simulated DOM. The repaired workflow was also verified in local headless Chrom
 against an isolated database: login, all five steps, save/edit, persistence after
 reload, store switching, and logout. Deployment still needs its own verification.
 
+## Vercel and production deployment
+
+Vercel hosts the React frontend only. It does not run this Django project or
+provide its database. Deploy Django separately on a service that supports a
+persistent Python web process and PostgreSQL, then add this Vercel environment
+variable:
+
+```text
+VITE_API_BASE_URL=https://your-django-api.example.com
+```
+
+The value must be the Django origin only, without a trailing slash or `/api`.
+For that backend, set `DJANGO_ALLOWED_HOSTS` to its hostname,
+`DJANGO_CSRF_TRUSTED_ORIGINS` to the Vercel HTTPS origin, and
+`DJANGO_CORS_ALLOWED_ORIGINS` to the same Vercel origin. Use HTTPS and set
+`DJANGO_SECURE_COOKIES=True` and `DJANGO_CROSS_SITE_COOKIES=True`. Run Django migrations and create the administrator
+on the hosted database before signing in.
+
+In Vercel Project Settings, turn off Deployment Protection for the public
+production deployment. A URL that redirects to `vercel.com/sso-api` is protected
+by Vercel and cannot be used by public visitors. The repository's `vercel.json`
+keeps `/api` out of the frontend SPA fallback; API requests are sent to the
+configured Django origin instead.
+
 ## PostgreSQL and deployment
 
 SQLite is the default local database. To use the included PostgreSQL 17 service,

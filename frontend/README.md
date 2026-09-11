@@ -26,3 +26,10 @@ steps, save/edit flows, errors, and authenticated store access.
 `npm run preview` serves the production build at <http://127.0.0.1:4173>. It does
 not provide the Django API; deployment must route `/api` to Django on the same
 origin.
+
+For a Vercel deployment with Django hosted separately, add
+`VITE_API_BASE_URL=https://your-django-api.example.com` in the Vercel project
+environment variables. Use the Django origin only, without `/api` or a trailing
+slash. Configure the backend's allowed hosts, CSRF trusted origin, CORS origin,
+and cross-site cookies for the exact Vercel HTTPS domain. See the root
+[deployment instructions](../README.md#vercel-and-production-deployment).
