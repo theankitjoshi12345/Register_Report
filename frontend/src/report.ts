@@ -42,7 +42,13 @@ export type Report = {
   id: number; report_date: string; close_type: CloseType; close_label: string; created_at: string
   calculated: {
     inputs: Partial<Record<AmountKey, string | null>> & Partial<Record<ItemKey, LineItem[]>>
-    scratch_off: { sales: string }
+    scratch_off: {
+      sales: string
+      slots?: Record<string, {
+        tickets_sold: number; ticket_price: string; sales: string; new_roll_count: number
+        starting_number: number | null; ending_number: number | null; ending_exhausted: boolean
+      }>
+    }
     comparisons: { phone_card_sales: Comparison; lottery_sales: Comparison; lottery_payout: Comparison }
     registers: { bodega_net_difference: string; gas_net_difference: string | null }
     normalized_line_items?: { item_type: string; amount: string; description: string }[]

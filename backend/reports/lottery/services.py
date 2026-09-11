@@ -72,6 +72,12 @@ def calculate_scratch_off_sales(readings):
         if type(exhausted) is not bool:
             raise ValidationError("Previous exhausted-roll state must be boolean.")
         new_roll_count = normalized_reading["new_roll_count"]
+        # A lower counter means the prior roll ended and one replacement roll
+        # was opened. Preserve larger explicit counts when multiple rolls were
+        # added during the close period.
+        if (new_roll_count == 0 and previous_number is not None
+                and ending_number is not None and ending_number < previous_number):
+            new_roll_count = 1
         roll_size = slot.max_ticket_number + 1
         current_roll_sold = roll_size if ending_number is None else ending_number + 1
         if new_roll_count:
@@ -88,18 +94,15 @@ def calculate_scratch_off_sales(readings):
             tickets_sold = 0 if ending_number is None and not initial_roll_active else current_roll_sold
         elif ending_number is None:
             tickets_sold = slot.max_ticket_number - previous_number
-        elif ending_number >= previous_number:
-            tickets_sold = ending_number - previous_number
         else:
-            raise ValidationError(
-                {f"scratch_offs.{index}.ending_number": f"Ending ticket number for slot {slot_number} cannot be before the previous close's number unless a new roll is marked."}
-            )
+            tickets_sold = ending_number - previous_number
         sales = tickets_sold * slot.ticket_price
         slots[slot_number] = {
             "tickets_sold": tickets_sold,
             "ticket_price": slot.ticket_price,
             "sales": sales,
             "new_roll_count": new_roll_count,
+            "starting_number": previous_number,
             "ending_number": ending_number,
             "ending_exhausted": ending_number is None and (exhausted or previous_number is not None or new_roll_count > 0 or initial_roll_active),
         }
@@ -144,7 +147,10 @@ def _line_items(values, field):
         if not isinstance(item, dict):
             raise ValidationError({field: f"Item {index + 1} is invalid."})
         result.append({
-            "amount": _money(item.get("amount"), f"{field}.{index}.amount"),
+            "amount": _money(
+                item.get("amount"), f"{field}.{index}.amount",
+                allow_negative=field == "tickets",
+            ),
             "description": _text(item.get("description", ""), f"{field}.{index}.description", 255),
         })
     return result

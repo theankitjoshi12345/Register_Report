@@ -51,6 +51,19 @@ class ReportInputTests(SimpleTestCase):
         self.assertEqual(result["slots"][1]["tickets_sold"], 53)
         self.assertEqual(calculate_scratch_off_sales([reading(None, 2)])["slots"][1]["tickets_sold"], 50)
 
+    def test_ticket_amounts_are_signed_but_other_line_items_remain_nonnegative(self):
+        calculated = calculate_daily_report(report_payload(
+            gas_cash_sales="100.00",
+            tickets=[{"amount": "+20.00"}, {"amount": "-8.00"}],
+        ))
+        self.assertEqual(calculated["registers"]["gas_net_difference"], Decimal("88.00"))
+        self.assertEqual([item["amount"] for item in calculated["inputs"]["tickets"]], [
+            Decimal("20.00"), Decimal("-8.00"),
+        ])
+        for field in ("vendor_payouts", "safe_drops"):
+            with self.subTest(field=field), self.assertRaises(ValidationError):
+                calculate_daily_report(report_payload(**{field: [{"amount": "-1.00"}]}))
+
     def test_last_sold_convention_conserves_every_catalog_roll(self):
         for slot in SCRATCH_OFF_SLOTS:
             with self.subTest(slot=slot.slot_number):
@@ -224,22 +237,24 @@ class ReportHistoryTests(TestCase):
         self.assertEqual(response.json()["calculated"]["inputs"]["gas_cash_sales"], "10.00")
         self.assertEqual(response.json()["calculated"]["normalized_line_items"][0]["description"], "Keep")
 
-    def test_incompatible_edit_rolls_back_all_inputs_and_normalized_rows(self):
+    def test_edit_that_moves_later_counter_backward_infers_rollover(self):
         prior = self.create("2026-09-09", readings=[reading(5)], tickets=[{"amount": "2", "description": "Original"}])
         later = self.create(readings=[reading(10)])
-        before_prior, before_later = self.fetch(prior), self.fetch(later)
         response = self.patch(prior, {"scratch_offs": [reading(15)], "tickets": [{"amount": "9"}]})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(str(later["id"]), str(response.json()))
-        self.assertEqual(self.fetch(prior), before_prior)
-        self.assertEqual(self.fetch(later), before_later)
+        self.assertEqual(response.status_code, 200, response.content)
+        refreshed = self.fetch(later)
+        self.assertEqual(refreshed["calculated"]["scratch_off"]["sales"], "400.00")
+        self.assertEqual(refreshed["calculated"]["normalized_scratch_offs"][0]["new_roll_count"], 1)
 
-    def test_incompatible_backdated_create_leaves_no_report(self):
+    def test_backdated_create_that_moves_later_counter_backward_infers_rollover(self):
         later = self.create(readings=[reading(10)])
         response = self.client.post("/api/reports/", report_payload("2026-09-09", scratch_offs=[reading(15)]), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(DailyReport.objects.count(), 1)
-        self.assertEqual(self.sales(later), "220.00")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(DailyReport.objects.count(), 2)
+        self.assertEqual(self.sales(later), "400.00")
+        saved = DailyReport.objects.get(pk=later["id"])
+        self.assertEqual(saved.scratch_offs[0]["new_roll_count"], 1)
+        self.assertEqual(saved.scratch_off_rolls.get().starting_number, 15)
 
     def test_moving_a_report_to_another_date_replays_old_and_new_positions(self):
         first = self.create("2026-09-08", readings=[reading(5)])

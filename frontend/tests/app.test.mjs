@@ -36,7 +36,13 @@ function reportFromForm(form, id = 1) {
     id, report_date: form.report_date, close_type: form.close_type, close_label: form.close_label, created_at: '2026-09-10T12:00:00Z',
     calculated: {
       inputs: Object.fromEntries([...fields.map(([key]) => [key, form[key]]), ...['tickets', 'vendor_payouts', 'safe_drops'].map((key) => [key, form[key]])]),
-      scratch_off: { sales: '15.00' }, comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
+      scratch_off: {
+        sales: '15.00',
+        slots: Object.fromEntries(form.scratch_offs.filter((row) => row.recorded !== false).map((row) => [String(row.slot_number), {
+          tickets_sold: 5, ticket_price: '1.00', sales: '5.00', new_roll_count: Number(row.new_roll_count),
+          starting_number: 3, ending_number: row.ending_number === '' ? null : Number(row.ending_number), ending_exhausted: row.ending_number === '',
+        }])),
+      }, comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
       registers: { bodega_net_difference: form.bodega_net_difference, gas_net_difference: '20.00' },
       normalized_line_items: [['tickets', 'ticket'], ['vendor_payouts', 'vendor_payout'], ['safe_drops', 'safe_drop']].flatMap(([key, item_type]) => form[key].map((item) => ({ ...item, item_type }))),
       normalized_scratch_offs: form.scratch_offs.map((row) => ({ ...row, ending_number: row.ending_number === '' ? null : Number(row.ending_number), new_roll_count: Number(row.new_roll_count) })),
@@ -113,6 +119,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await enter('phone_card_actual_sales', '17.25'); await click('Continue')
   assert.match(currentStep(), /Scratch-off count/)
   await enter('scratch_offs.0.ending_number', '25'); await click('Continue'); assert.match(currentStep(), /Scratch-off count/)
+  await enter('scratch_offs.0.ending_number', '4.5'); assert.equal(input('scratch_offs.0.ending_number').value, '25')
   await enter('scratch_offs.0.ending_number', '4')
   await enter('scratch_offs.1.new_roll_count', '1.5'); await click('Continue'); assert.match(currentStep(), /Scratch-off count/)
   await enter('scratch_offs.1.new_roll_count', '2'); await click('Continue')
@@ -120,25 +127,38 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await fillVisible(); await enter('bodega_net_difference', '-3.25'); await click('Continue')
   assert.match(currentStep(), /Gas register/)
   await fillVisible(); await enter('gas_phone_card_sales', '17.25'); await enter('gas_card_payment_sales', '98.50')
-  for (const [title, key, amount, description] of [['tickets', 'tickets', '12.50', 'Customer tab'], ['vendor payouts', 'vendor_payouts', '7.00', 'Bread delivery'], ['safe drops', 'safe_drops', '100.00', 'Evening deposit']]) {
+  for (const [title, key, amount, description] of [['tickets', 'tickets', '+12.50', 'Customer tab'], ['vendor payouts', 'vendor_payouts', '7.00', 'Bread delivery'], ['safe drops', 'safe_drops', '100.00', 'Evening deposit']]) {
     await click(`Add ${title} amount`); await enter(`${key}.0.amount`, amount); await enter(`${key}.0.description`, description)
   }
   await click('Save report')
   assert.match(container.textContent, /Report for 2026-09-10/)
   assert.match(container.textContent, /Customer tab/); assert.match(container.textContent, /Bread delivery/); assert.match(container.textContent, /Evening deposit/)
+  assert.match(container.textContent, /Starting number/); assert.match(container.textContent, /Value generated/)
+  assert.match(container.textContent, /003/); assert.match(container.textContent, /004/); assert.match(container.textContent, /\$5.00/)
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.equal(save.headers['X-CSRFToken'], 'signed-in-token'); assert.equal(save.headers['X-Store-ID'], '1')
   assert.equal(save.body.gas_phone_card_sales, '17.25'); assert.equal(save.body.gas_card_payment_sales, '98.50'); assert.equal(save.body.gas_card_sales, undefined)
+  assert.equal(save.body.tickets[0].amount, '+12.50')
   assert.equal(save.body.scratch_offs[1].ending_number, ''); assert.equal(save.body.scratch_offs[1].new_roll_count, 2)
   await click('Edit'); assert.equal(input('close_label').value, 'Evening review')
   await click('Continue'); assert.equal(input('phone_card_actual_sales').value, '17.25')
   await click('Continue'); assert.equal(input('scratch_offs.0.ending_number').value, '4'); assert.equal(input('scratch_offs.1.new_roll_count').value, '2')
   await click('Continue'); assert.equal(input('bodega_net_difference').value, '-3.25')
-  await click('Continue'); assert.equal(input('tickets.0.description').value, 'Customer tab'); assert.equal(input('gas_card_payment_sales').value, '98.50')
+  await click('Continue'); assert.equal(input('tickets.0.description').value, 'Customer tab'); assert.equal(input('tickets.0.amount').value, '+12.50'); assert.equal(input('gas_card_payment_sales').value, '98.50')
   override = (call) => { if (call.method === 'PATCH') later.calculated.registers.gas_net_difference = '777.00' }
   await click('Save changes')
   assert.equal(requests.filter((call) => call.url === '/api/reports/' && call.method === 'GET').length, 3)
   await click('2026-09-11day Later close'); assert.match(container.textContent, /\$777.00/)
+})
+
+test('ticket amounts explain signs and accept a negative customer payment', async () => {
+  await render(); await goToGas(); await fillVisible()
+  await click('Add tickets amount')
+  assert.match(container.textContent, /Use \+ when the customer was charged and − when the customer paid/)
+  await enter('tickets.0.amount', '-8.25')
+  await click('Save report')
+  const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
+  assert.equal(save.body.tickets[0].amount, '-8.25')
 })
 
 test('Enter on an earlier step advances without creating a report', async () => {

@@ -153,7 +153,10 @@ class ReportLineItem(models.Model):
         ordering = ["item_type", "position", "id"]
         indexes = [models.Index(fields=["report", "item_type"])]
         constraints = [
-            models.CheckConstraint(condition=models.Q(amount__gte=0), name="report_line_item_nonnegative"),
+            models.CheckConstraint(
+                condition=models.Q(item_type="ticket") | models.Q(amount__gte=0),
+                name="report_line_item_amount_valid",
+            ),
         ]
 
 

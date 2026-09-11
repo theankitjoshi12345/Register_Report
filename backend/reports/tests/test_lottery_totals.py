@@ -21,6 +21,8 @@ class ScratchOffSalesTests(SimpleTestCase):
         )
 
         self.assertEqual(result["slots"][4]["tickets_sold"], 5)
+        self.assertEqual(result["slots"][4]["starting_number"], 10)
+        self.assertEqual(result["slots"][4]["ending_number"], 15)
         self.assertEqual(result["total_sales"], Decimal("25.00"))
 
     def test_empty_ending_counter_counts_the_rest_of_the_roll(self):
@@ -69,11 +71,14 @@ class ScratchOffSalesTests(SimpleTestCase):
 
         self.assertEqual(result["total_sales"], Decimal("0.00"))
 
-    def test_counter_cannot_go_backward_without_a_new_roll(self):
-        with self.assertRaises(ValidationError):
-            calculate_scratch_off_sales(
-                [{"slot_number": 1, "previous_number": 12, "ending_number": 5}]
-            )
+    def test_lower_counter_automatically_adds_one_new_roll(self):
+        result = calculate_scratch_off_sales(
+            [{"slot_number": 1, "previous_number": 12, "ending_number": 5}]
+        )
+
+        self.assertEqual(result["slots"][1]["new_roll_count"], 1)
+        self.assertEqual(result["slots"][1]["tickets_sold"], 18)
+        self.assertEqual(result["slots"][1]["sales"], Decimal("360.00"))
 
 
 class DailyReportCalculationTests(SimpleTestCase):
@@ -155,12 +160,13 @@ class DailyReportApiTests(TestCase):
             "vendor_payouts": [], "safe_drops": [],
         }
         created = self.client.post("/api/reports/", payload, content_type="application/json").json()
-        payload["tickets"] = [{"amount": "22.00", "description": "Corrected"}]
+        payload["tickets"] = [{"amount": "-22.00", "description": "Customer paid"}]
 
         response = self.client.patch(f"/api/reports/{created['id']}/", payload, content_type="application/json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["calculated"]["normalized_line_items"][0]["amount"], "22.00")
+        self.assertEqual(response.json()["calculated"]["normalized_line_items"][0]["amount"], "-22.00")
+        self.assertEqual(response.json()["calculated"]["registers"]["gas_net_difference"], "122.00")
 
 
 class LotteryTotalsTests(SimpleTestCase):

@@ -115,6 +115,10 @@ def _calculate_from_history(report, baseline, initial_active_slots=()):
         for reading in readings
     ]
     calculated = calculate_daily_report(payload, allow_missing_card_payments=True)
+    # Persist an automatically inferred rollover so history, edits, and the
+    # final report all show the effective number of new rolls.
+    for reading in readings:
+        reading["new_roll_count"] = calculated["scratch_off"]["slots"][reading["slot_number"]]["new_roll_count"]
     return calculated, readings
 
 
@@ -125,15 +129,23 @@ def _apply_endings(state, calculated):
 
 def _persist_calculation(report, calculated, readings, baseline):
     serialized = _json_value(calculated)
+    serialized_readings = _json_value(readings)
+    update_fields = []
     if report.calculated_report != serialized:
         report.calculated_report = serialized
-        report.save(update_fields=["calculated_report", "updated_at"])
+        update_fields.append("calculated_report")
+    if report.scratch_offs != serialized_readings:
+        report.scratch_offs = serialized_readings
+        update_fields.append("scratch_offs")
+    if update_fields:
+        report.save(update_fields=[*update_fields, "updated_at"])
     # Keep every submitted slot, including exhausted and initial blank readings.
     report.scratch_off_rolls.all().delete()
     ScratchOffRoll.objects.bulk_create([
         ScratchOffRoll(
             report=report, slot_number=reading["slot_number"],
             last_night_number=baseline.get(reading["slot_number"], (None, False))[0],
+            starting_number=baseline.get(reading["slot_number"], (None, False))[0],
             ending_number=reading["ending_number"], new_roll_counter=reading["new_roll_count"] + 1,
             ending_exhausted=calculated["scratch_off"]["slots"][reading["slot_number"]]["ending_exhausted"],
         )

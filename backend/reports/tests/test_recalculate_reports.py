@@ -46,18 +46,15 @@ class RecalculateReportsCommandTests(TestCase):
         self.assertTrue(report.scratch_off_rolls.get().ending_exhausted)
         self.assertIn("Recalculated 2 report(s)", stdout.getvalue())
 
-    def test_conflicting_history_rolls_back_the_whole_store(self):
-        earlier = self.legacy_report("2026-09-09", 20)
+    def test_recalculation_infers_and_persists_implicit_rollover(self):
+        self.legacy_report("2026-09-09", 20)
         later = self.legacy_report("2026-09-10", 5)
-        with self.assertRaises(CommandError) as error:
-            call_command("recalculate_reports", store=self.store.pk, stdout=StringIO())
-        self.assertIn(str(later.pk), str(error.exception))
-        earlier.refresh_from_db()
+        call_command("recalculate_reports", store=self.store.pk, stdout=StringIO())
         later.refresh_from_db()
-        self.assertEqual(earlier.calculated_report, {"old_snapshot": True})
-        self.assertEqual(later.calculated_report, {"old_snapshot": True})
-        self.assertFalse(earlier.scratch_off_rolls.exists())
-        self.assertFalse(later.scratch_off_rolls.exists())
+        self.assertEqual(later.scratch_offs[0]["new_roll_count"], 1)
+        self.assertEqual(later.calculated_report["scratch_off"]["slots"]["1"]["starting_number"], 20)
+        self.assertEqual(later.calculated_report["scratch_off"]["slots"]["1"]["sales"], "200.00")
+        self.assertEqual(later.scratch_off_rolls.get().new_roll_counter, 2)
 
     def test_store_selection_leaves_other_stores_unchanged(self):
         first = self.legacy_report("2026-09-10", 20)

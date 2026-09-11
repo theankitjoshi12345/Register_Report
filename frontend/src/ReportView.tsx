@@ -17,6 +17,8 @@ function ComparisonRow({ label, value }: { label: string; value: Comparison }) {
   )
 }
 
+const ticketNumber = (value: number | null | undefined, empty: string) => value == null ? empty : String(value).padStart(3, '0')
+
 export default function ReportView({ report, onEdit, onNew }: { report: Report; onEdit: (report: Report) => void; onNew: () => void }) {
   const { calculated } = report
   const entered = formFromReport(report)
@@ -70,8 +72,18 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
         ))}</div>
         <h3 className="mb-3 mt-7 font-semibold">Scratch-off entries</h3>
         <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-          <thead><tr className="border-b text-xs text-slate-500"><th className="py-2">Slot</th><th>Last ticket sold</th><th>New rolls added</th></tr></thead>
-          <tbody>{entered.scratch_offs.map((row) => <tr key={row.slot_number} className="border-b border-slate-100 last:border-0"><th scope="row" className="py-2">#{row.slot_number}</th><td>{row.recorded === false ? 'Not recorded' : row.ending_number === '' ? 'Empty' : row.ending_number.padStart(3, '0')}</td><td>{row.new_roll_count}</td></tr>)}</tbody>
+          <thead><tr className="border-b text-xs text-slate-500"><th className="py-2 pr-3">Slot</th><th className="px-3">Starting number</th><th className="px-3">Ending number</th><th className="px-3">New rolls added</th><th className="pl-3">Value generated</th></tr></thead>
+          <tbody>{entered.scratch_offs.map((row) => {
+            const result = calculated.scratch_off.slots?.[String(row.slot_number)]
+            const notRecorded = row.recorded === false || !result
+            return <tr key={row.slot_number} className="border-b border-slate-100 last:border-0">
+              <th scope="row" className="py-2 pr-3">#{row.slot_number}</th>
+              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.starting_number, 'No prior number')}</td>
+              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.ending_number, 'Roll sold out')}</td>
+              <td className="px-3">{notRecorded ? '—' : result.new_roll_count}</td>
+              <td className="pl-3 font-semibold">{notRecorded ? '—' : money(result.sales)}</td>
+            </tr>
+          })}</tbody>
         </table></div>
       </section>
     </main>
