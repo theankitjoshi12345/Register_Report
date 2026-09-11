@@ -194,7 +194,8 @@ cover reconciliation, malformed inputs, report/history edits, store isolation,
 session/CSRF behavior, and form navigation. Frontend interaction tests run against
 a simulated DOM. The repaired workflow was also verified in local headless Chrome
 against an isolated database: login, all five steps, save/edit, persistence after
-reload, store switching, and logout. Deployment still needs its own verification.
+reload, store switching, and logout. The Vercel deployment was verified against
+its public frontend, health endpoint, and Neon-backed session endpoint.
 
 ## Vercel and production deployment
 
