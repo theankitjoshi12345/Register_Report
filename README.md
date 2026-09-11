@@ -226,8 +226,18 @@ npx vercel env run -e production -- backend/.venv/bin/python backend/manage.py m
 ```
 
 Create the first administrator interactively with the same command prefix and
-`createsuperuser`. Do not place `DATABASE_URL` or `DJANGO_SECRET_KEY` in source
-control.
+`createsuperuser`. Vercel does not download values stored as Secret variables,
+so provide a temporary local signing key for this management command:
+
+```sh
+DJANGO_SECRET_KEY=local-management-command \
+  npx vercel env run -e production -- \
+  backend/.venv/bin/python backend/manage.py createsuperuser
+```
+
+This temporary value only lets Django initialize locally; it does not replace
+the private `DJANGO_SECRET_KEY` used by the deployed application. Do not place
+`DATABASE_URL` or the production secret in source control.
 
 In Vercel Project Settings, turn off Deployment Protection for the public
 production deployment. A URL that redirects to `vercel.com/sso-api` is protected
