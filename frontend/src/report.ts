@@ -1,0 +1,99 @@
+export type CloseType = 'day' | 'shift'
+export type LineItem = { amount: string; description: string }
+export type ScratchOff = { slot_number: number; ending_number: string; new_roll_count: number | string; recorded?: boolean }
+export type CatalogSlot = { slot_number: number; ticket_price: string; max_ticket_number: number }
+export type Comparison = { expected: string; actual: string | null; difference: string | null; status: 'match' | 'mismatch' | 'incomplete' }
+export type StoreLocation = { id: number; name: string }
+export type Session = { user: { id: number; username: string } | null; stores: StoreLocation[]; csrfToken: string }
+export type FieldErrors = Record<string, string>
+
+export const independentFields = [
+  ['lottery_terminal_sales', 'Actual lottery terminal sales'],
+  ['lottery_terminal_payout', 'Actual lottery payout'],
+  ['phone_card_actual_sales', 'Actual phone card sales'],
+] as const
+export const bodegaFields = [
+  ['bodega_net_difference', 'Bodega net difference'],
+  ['bodega_lottery_sales', 'Bodega lottery sales'],
+  ['bodega_lottery_payout', 'Bodega lottery payout'],
+  ['bodega_phone_card_sales', 'Bodega phone card sales'],
+  ['bodega_gas_sales', 'Gas sold by Bodega'],
+] as const
+export const gasFields = [
+  ['gas_cash_sales', 'Gas total cash sales'],
+  ['gas_lottery_sales', 'Gas lottery sales'],
+  ['gas_lottery_payout', 'Gas lottery payout'],
+  ['gas_phone_card_sales', 'Gas phone card sales'],
+  ['gas_card_payment_sales', 'Card payments, net of fees'],
+] as const
+export const fields = [...independentFields, ...bodegaFields, ...gasFields]
+export type AmountKey = typeof fields[number][0]
+export type ItemKey = 'tickets' | 'vendor_payouts' | 'safe_drops'
+export const itemGroups: { key: ItemKey; title: string; type: string }[] = [
+  { key: 'tickets', title: 'Tickets', type: 'ticket' },
+  { key: 'vendor_payouts', title: 'Vendor payouts', type: 'vendor_payout' },
+  { key: 'safe_drops', title: 'Safe drops', type: 'safe_drop' },
+]
+export type FormState = Record<AmountKey, string> & {
+  report_date: string; close_type: CloseType; close_label: string
+  tickets: LineItem[]; vendor_payouts: LineItem[]; safe_drops: LineItem[]; scratch_offs: ScratchOff[]
+}
+export type Report = {
+  id: number; report_date: string; close_type: CloseType; close_label: string; created_at: string
+  calculated: {
+    inputs: Partial<Record<AmountKey, string | null>> & Partial<Record<ItemKey, LineItem[]>>
+    scratch_off: { sales: string }
+    comparisons: { phone_card_sales: Comparison; lottery_sales: Comparison; lottery_payout: Comparison }
+    registers: { bodega_net_difference: string; gas_net_difference: string | null }
+    normalized_line_items?: { item_type: string; amount: string; description: string }[]
+    normalized_scratch_offs?: { slot_number: number; ending_number: number | null; new_roll_count: number }[]
+  }
+}
+
+export const steps = [
+  { label: 'Close details', fields: ['report_date', 'close_type', 'close_label'] },
+  { label: 'Independent totals', fields: independentFields.map(([key]) => key) },
+  { label: 'Scratch-off count', fields: ['scratch_offs'] },
+  { label: 'Bodega AI', fields: bodegaFields.map(([key]) => key) },
+  { label: 'Gas register', fields: [...gasFields.map(([key]) => key), ...itemGroups.map(({ key }) => key)] },
+]
+export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+export const initialScratch = (): ScratchOff[] => Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ending_number: '', new_roll_count: 0 }))
+export const initialForm = (): FormState => ({
+  report_date: localDate(), close_type: 'day', close_label: '',
+  ...Object.fromEntries(fields.map(([key]) => [key, ''])) as Record<AmountKey, string>,
+  tickets: [], vendor_payouts: [], safe_drops: [], scratch_offs: initialScratch(),
+})
+export const money = (value: string | null | undefined) => value == null ? 'Needs entry' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
+
+export function formFromReport(report: Report): FormState {
+  const form = initialForm()
+  for (const [key] of fields) form[key] = report.calculated.inputs[key] ?? ''
+  for (const { key, type } of itemGroups) {
+    form[key] = report.calculated.normalized_line_items
+      ? report.calculated.normalized_line_items.filter((item) => item.item_type === type).map(({ amount, description }) => ({ amount, description }))
+      : (report.calculated.inputs[key] ?? []).map((item) => ({ ...item }))
+  }
+  form.scratch_offs = initialScratch().map((row) => {
+    const saved = report.calculated.normalized_scratch_offs?.find((item) => item.slot_number === row.slot_number)
+    return saved ? { ...row, ending_number: String(saved.ending_number ?? ''), new_roll_count: saved.new_roll_count } : { ...row, recorded: false }
+  })
+  return { ...form, report_date: report.report_date, close_type: report.close_type, close_label: report.close_label }
+}
+
+export function flattenErrors(value: unknown, path = ''): FieldErrors {
+  if (typeof value === 'string') return { [path || 'form']: value }
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) return { [path || 'form']: value.join(' ') }
+  if (value && typeof value === 'object') {
+    return Object.assign({}, ...Object.entries(value).map(([key, entry]) => flattenErrors(entry, path ? `${path}.${key}` : key)))
+  }
+  return {}
+}
+
+export function errorStep(errors: FieldErrors): number | undefined {
+  const indexes = Object.keys(errors).map((path) => steps.findIndex((step) => step.fields.includes(path.split('.')[0]))).filter((index) => index >= 0)
+  return indexes.length ? Math.min(...indexes) : undefined
+}
+
+export const pendingDates = (reports: Report[]) => [...new Set(reports.filter((report) => report.close_type === 'shift').map((report) => report.report_date))]
+  .filter((date) => !reports.some((report) => report.report_date === date && report.close_type === 'day')).sort().reverse()
