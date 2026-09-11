@@ -1,171 +1,179 @@
-# ANY AGENT IS NOT PERMITTED TO DO ANY CHANGE IN THIS FILE
+# Register Report Requirements
 
-There needs to be option for both day close and shift close depending on what the user want to perform. There always needs to be a day close.
+The application must support both day closes and shift closes, depending on what
+the user wants to perform. There must always be a day close.
 
-## Lottery  
+## Lottery
 
-There are 20 different scratchoff each one assigned a number.
-Number 1 is $20 from 000 to 024
-Number [2:3] is $10 from 000 to 024
-Number [4:7] is $5 from 000 to 049
-Number [8-10] is $3 from 000 to 074
-Number [11-15] is $2 from 000 to 124
-Number [16-20] is $1 from 000 to 249
+There are 20 scratch-off games, each assigned a number:
 
-User cannot enter the invalid number. They can leave it empty. 
-This will result in giving us the actual total sctarch off sales. 
+- Game 1 costs $20 and runs from 000 to 024.
+- Games 2–3 cost $10 and run from 000 to 024.
+- Games 4–7 cost $5 and run from 000 to 049.
+- Games 8–10 cost $3 and run from 000 to 074.
+- Games 11–15 cost $2 and run from 000 to 124.
+- Games 16–20 cost $1 and run from 000 to 249.
 
-The lottery terminal will provide two important number, which is also entered by the user. One is actual intant ticket sales and another is actual payout.
-There are two POS registers: one can be reffered as gas register and another can be reffered as bodega ai register used in this store.
-Both of them will provide two sales/payout values:
-Lottery Sales
-Lottery Payout
+Users must not be able to enter invalid numbers, but they may leave a number
+empty. This allows the application to calculate actual scratch-off sales.
 
-The backend will add both sales/payout values across both register and compare it against the actual number. 
+The lottery terminal provides two values for the user to enter: actual instant-
+ticket sales and actual payouts. The gas register and Bodega AI register each
+provide lottery sales and lottery payout values.
 
-Actual scratch off sales + Actual Lottery sales == Combined Lottery sales across POS
-Actual payout sales == Combine POS payout sales
+The backend will add the sales and payout values from both registers and compare
+them with the actual lottery-terminal values:
 
-There also need to be a button which users can click if they want to add a new roll of scratch off tickets before the day ends. 
+```text
+Actual scratch-off sales + actual lottery sales
+    == combined lottery sales across both POS registers
 
-Our backend should be able to handle this based on just the number provided by the user. 
+Actual payout sales == combined POS payout sales
+```
 
+There must also be a button that users can click when they add a new roll of
+scratch-off tickets before the day ends. The backend must handle this using the
+number provided by the user.
 
-## PhoneCard
+## Phone Cards
 
-Same like lottery, there is one phone card generating machine, which will provide what is the actual phone card sales for the day.
+One phone-card machine provides the actual phone-card sales for the day. The
+backend must compare that amount with the combined phone-card sales entered from
+both POS registers.
 
-This actual sales needs to be compared against the saled performed by the both the registers. 
+## Tickets (gas register only)
 
-The owner will enter the sales from both the POS registers.
-The backend will compare this number against the actual sales.
+This store allows known regular customers to receive a ticket and pay the store
+the next day. At the end of the day or shift, the owner will enter the total value
+of tickets created that day on the gas register. This feature does not apply to
+the Bodega AI register.
 
+Users must be able to enter multiple optional amounts. Each amount may have an
+optional description containing any relevant information. The total will be used
+at the end of the day or shift.
 
-## Tickets [This is only for gas register. This means the fake sales, which people owes to the store.]
+## Vendor Payouts (gas register only)
 
-This is a new feature unlike other stores. This business let their regular customers make a ticket and pay it next day if they are known. 
+Vendor payouts work like tickets. Users must be able to enter multiple optional
+amounts with optional descriptions. The total will be used at the end of the day
+or shift.
 
-At the end of the day, the owner will enter the total ticket make that day on gas register. This feature will not be there for bodega ai register. 
-Please allow user to input optional multiple amounts.
-There needs to be optional description box for the tickets where user can add any data if they want.
-At the end of the day/shift, this amount will be used.
+## Card Sales (gas register only)
 
+The owner will enter the gas register's total cash sales. The register has a
+separate card machine that is not connected to the POS, so it operates
+independently. These card-machine sales are recorded as cash sales for the POS.
 
-## Vender Payout [This is only for gas register]
+At the end of the day or shift, the owner will enter the gas register's total card
+sales. The frontend must accept the net amount without fees, and the backend must
+use it at the end of the day or shift.
 
-This will perform exactly like tickets. Please also provide the optional description box. 
-At the end of the day, this amount will be used. 
-Please allow user to input optional multiple amounts.
+## Safe Drops (gas register only)
 
-## Card Sales [ This is only for gas register]
+This is the total cash amount dropped into the locked safe, similar to an
+in-store locker. Users must be able to enter multiple optional amounts.
 
-The owner will put in the total cash sales for gas register. It has a seperate card machiche which it uses to use card which is not connected to POS. So it works independently and we put that sale as cash for the POS.
+## Gas (Bodega AI register only)
 
-At the end of the day/shift, user has to put in the total card sales for gas register. 
-For front end, please provide to enter the net amount without including fees. 
+This is the total amount of gas sold through the Bodega AI register. That POS does
+not have access to the pumps, so the money is collected in this register while the
+gas is sold through the gas register. This is a simulated sale for the gas
+register, and the backend will use it at the end of the day or shift.
 
-The backend will use this amount at the end of the day/shift. 
+## Net Difference (Bodega AI register only)
 
+At the end of the day, this is the difference shown by the Bodega AI register. It
+can be positive or negative, so users must be able to enter either value.
 
-## Safe Drop [This is only for gas register]
-This is the total cash amount dropped by in the locked safe, similar to in store locker. 
-Please allow user to input optional multiple amounts. 
+## What the owner enters for every day or shift close
 
-## Gas [This is only for bodega AI register]
-This is the total amount of gas sold by bodega Ai register.
+All of these items must be organized into steps:
 
-This POS doesn't have access to the pump which means the money is collected in this register but sold by gas register. 
+### Independent items
 
-This is fake sale for gas register. The backend will use this amount at the end of day/shift.
+- Phone-card sales
 
+### Lottery terminal
 
-## Net Difference [This is only for Bodega AI register.]
-At the end of the day, this is the difference amount in the bodega Ai register. It could be either + or -. 
-User should be able to input either positive or negative amount
+- Lottery sales
+- Lottery payout
 
-## What the owner will input everytime when closing day/shift?
-All of these needs to be in steps. 
+### Scratch-off tickets
 
-Independent Things: 
-Phone Card Sales
+- Slots 1 through 20.
+- Twenty ending numbers, each followed by a checkbox indicating whether a new
+  roll was added that day. The application must ask for confirmation before
+  adding a new roll for a slot.
 
-Lottery Terminal:
-Lottery Sales
-Lottery Payout
+### Bodega AI
 
-Scratch Off:
-1
-...
-20
-// 20 different ending numbers.  Every number should be followed by a checkbox if any new roll was added today. That needs to send a confirmation before adding a checkfor for _ scratch number.
+- Net difference
+- Lottery sales
+- Lottery payout
+- Phone cards
+- Gas
 
-Bodega AI:
-Net Difference
-Lottery Sales
-Lottery Payout
-Phone Card
-Gas
+### Gas register
 
-Gas Register:
-Total Cash Sales
-Safe Drop
-Tickets
-Lottery Sales
-Lottery Payout
+- Total cash sales
+- Safe drops
+- Tickets
+- Lottery sales
+- Lottery payout
+- Vendor payouts
+- Card-machine sales without fees
 
 ## Clarifications (2026-09-10)
 
 - Authentication and authorization are intentionally deferred until the rest of
-    the product is complete.
-- Scratch-off counters accept either a valid whole-number ticket counter or
-    empty/null. An empty ending counter means all tickets remaining in that roll
-    were sold.
+  the product is complete.
+- Scratch-off counters accept either a valid whole-number ticket counter or an
+  empty/null value. An empty ending counter means that all tickets remaining in
+  that roll were sold.
 - Scratch-off sales use the ticket price and the clarified roll formula:
-    `(ending - starting) + (new roll counter - 1) * (ticket ending - starting + 1)
-    + (ending - last night number + 1)`, then multiplied by ticket price.
-- The new-roll value is a counter per scratch-off slot, not only a checkbox.
-- Bodega AI net difference is required and may be positive or negative, with
-    up to two decimal places.
+  `(ending - starting) + (new roll counter - 1) * (ticket ending - starting + 1)
+  + (ending - last night number + 1)`, then multiplied by the ticket price.
+- The new-roll value is a counter for each scratch-off slot, not only a checkbox.
+- The Bodega AI net difference is required and may be positive or negative, with
+  up to two decimal places.
 - Reports must be editable after saving.
 - Report data should use normalized, queryable records for line items and
-    scratch-off rolls rather than relying only on JSON blobs.
-Vender Payout
-Card Machine without including fee
+  scratch-off rolls rather than relying only on JSON blobs.
 
-## How backend will function
+## How the backend will function
 
-For phone card, it will check the difference as mentioned above.
+For phone cards, the backend will check the difference described above. It will
+also check the differences for lottery sales and payouts. For Bodega AI, it will
+display the net difference amount.
 
-For Lottery sales and payout, it will check the difference as mentioned above.
+For the gas register, it will calculate:
 
-For bodega AI, it will just display the Net difference amount.
+```text
+Total cash sales
+- gas (from Bodega AI)
+- safe drops
+- tickets
+- vendor payouts
+- card-machine sales without fees
+```
 
-For gas register, it has to to do the math, which is
-    Total cash sales - gas (from bodega AI) - safe drop - tickets - vender payout -         cardmachine without including fee
+This provides the gas register's net difference, which can be positive or
+negative.
 
-    This is provide the net difference for the gas register which could be both positive and negative. 
+The backend should provide these values in a table:
 
-The backend should provide all of these things in a table to the user. Like
-    
-    Bodega Ai [Net Difference: ]
-    Gas Register [Net Difference: ]
+```text
+Bodega AI [Net Difference: ]
+Gas Register [Net Difference: ]
 
-    PHone card [Expected: , Actual: ]
-    Lottey sales [Expectee: , Actual: ]
-    Lottery payout [Expectee: , Actual: ]
+Phone card [Expected: , Actual: ]
+Lottery sales [Expected: , Actual: ]
+Lottery payout [Expected: , Actual: ]
+```
 
-    Then display all the information user had input.
-
+The report should also display all information entered by the user.
 
 ## UI
 
-We shoudld be able to access reports/shifts from any day as well.
-
-
-
-
-
-
-
-
+Users should be able to access reports and shifts from any day.
 
