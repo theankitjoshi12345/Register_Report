@@ -24,6 +24,16 @@ CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
 CROSS_SITE_COOKIES = env.bool("DJANGO_CROSS_SITE_COOKIES", default=False)
 
+# Vercel supplies these hostnames at runtime. Trust only the deployment's own
+# generated hostname and production hostname, including preview deployments.
+for vercel_host_variable in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL"):
+    vercel_host = env(vercel_host_variable, default="").strip()
+    if vercel_host and vercel_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(vercel_host)
+    vercel_origin = f"https://{vercel_host}" if vercel_host else ""
+    if vercel_origin and vercel_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(vercel_origin)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

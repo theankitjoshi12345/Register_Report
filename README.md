@@ -198,27 +198,40 @@ reload, store switching, and logout. Deployment still needs its own verification
 
 ## Vercel and production deployment
 
-Vercel hosts the React frontend only. It does not run this Django project or
-provide its database. Deploy Django separately on a service that supports a
-persistent Python web process and PostgreSQL, then add this Vercel environment
-variable:
+Vercel builds the React frontend and exposes Django as a Python Function at
+`/api/*`. The frontend and API therefore use the same HTTPS origin, and the
+frontend does not need `VITE_API_BASE_URL` in this deployment.
+
+The production database is the `neon-blue-bucket` Neon Postgres resource
+connected through the Vercel Marketplace. It supplies `DATABASE_URL` to the
+Production, Preview, and Development environments. SQLite remains the default
+when `DATABASE_URL` is absent, including ordinary local development.
+
+Set these additional variables in every Vercel environment that will run the
+API:
 
 ```text
-VITE_API_BASE_URL=https://your-django-api.example.com
+DJANGO_DEBUG=False
+DJANGO_SECRET_KEY=<unique private value>
+DJANGO_SECURE_COOKIES=True
 ```
 
-The value must be the Django origin only, without a trailing slash or `/api`.
-For that backend, set `DJANGO_ALLOWED_HOSTS` to its hostname,
-`DJANGO_CSRF_TRUSTED_ORIGINS` to the Vercel HTTPS origin, and
-`DJANGO_CORS_ALLOWED_ORIGINS` to the same Vercel origin. Use HTTPS and set
-`DJANGO_SECURE_COOKIES=True` and `DJANGO_CROSS_SITE_COOKIES=True`. Run Django migrations and create the administrator
-on the hosted database before signing in.
+Vercel automatically supplies the generated deployment and production
+hostnames; Django adds both to its allowed hosts and trusted CSRF origins. Run
+database migrations before using a newly provisioned Neon database:
+
+```sh
+npx vercel env run -e production -- backend/.venv/bin/python backend/manage.py migrate
+```
+
+Create the first administrator interactively with the same command prefix and
+`createsuperuser`. Do not place `DATABASE_URL` or `DJANGO_SECRET_KEY` in source
+control.
 
 In Vercel Project Settings, turn off Deployment Protection for the public
 production deployment. A URL that redirects to `vercel.com/sso-api` is protected
 by Vercel and cannot be used by public visitors. The repository's `vercel.json`
-keeps `/api` out of the frontend SPA fallback; API requests are sent to the
-configured Django origin instead.
+routes `/api/*` to Django and all other application routes to the React SPA.
 
 ## PostgreSQL and deployment
 
@@ -232,10 +245,10 @@ DATABASE_URL=postgresql://register_report:local-development-only@127.0.0.1:5432/
 Then run `make migrate` and restart Django. Switching the database does not copy
 existing SQLite data. `make db-stop` retains the PostgreSQL volume.
 
-Deployment is not included. A hosted installation needs HTTPS, a private Django
-secret, allowed hosts, database configuration, and a server that routes `/api/`
-to Django. Secure session and CSRF cookies default on when debug is off. Vite's
-preview command serves the frontend build only; it does not provide the API.
+The Vercel deployment needs HTTPS, a private Django secret, and the connected
+Neon database. Secure session and CSRF cookies default on when debug is off.
+Vite's local preview command serves the frontend build only; use the normal
+two-server development commands when testing the API locally.
 
 ## Structure
 
@@ -244,6 +257,7 @@ backend/config/       Django settings and URL routes
 backend/stores/       Store memberships, login/session API, admin management
 backend/reports/      Models, report API, calculations, and history replay
 frontend/src/         Form, login, report display, and browser state
+api/index.py          Vercel Python Function entry point for Django
 scripts/setup.sh      Repeatable local dependency/database setup
 compose.yaml          Optional local PostgreSQL service
 Makefile              Setup, development, and verification commands

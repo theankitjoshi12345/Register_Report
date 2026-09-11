@@ -19,3 +19,4 @@ dist/
 backend/staticfiles/
 backend/media/
 
+.vercel/
