@@ -159,7 +159,8 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
 test('sign selectors support negative amounts without a minus key', async () => {
   await render(); await goToGas(); await fillVisible()
   await click('Add tickets amount')
-  assert.match(container.textContent, /Choose \+ when the customer was charged and − when the customer paid/)
+  assert.match(container.textContent, /Choose \+ when a ticket is created for the customer and − when the customer pays the ticket/)
+  assert.doesNotMatch(container.textContent, /Phone card sales are prepaid phone cards/)
   await enter('Tickets amount 1 sign', '-'); await enter('tickets.0.amount', '8.25')
   await click('Save report')
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')

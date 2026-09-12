@@ -57,8 +57,9 @@ the Bodega AI register.
 Users must be able to enter multiple optional amounts. Each amount may have an
 optional description containing any relevant information. The total will be used
 at the end of the day or shift. Ticket amounts may be positive or negative. The
-frontend must provide a `+`/`-` selector: `+` when a customer is charged and `-`
-when a customer pays the store. The amount input accepts the unsigned value.
+frontend must provide a `+`/`-` selector: `+` when a ticket is created for the
+customer and `-` when the customer pays the ticket. The amount input accepts the
+unsigned value.
 
 ## Vendor Payouts (Verifone only)
 
@@ -146,7 +147,7 @@ All of these items must be organized into steps:
 - The new-roll value is a counter for each scratch-off slot, not only a checkbox.
 - Every amount that may be positive or negative uses a separate `+`/`-` selector,
   including ticket amounts and the Bodega AI net difference. For tickets, `+`
-  means the customer was charged and `-` means the customer paid the store.
+  means a ticket was created for the customer and `-` means the customer paid it.
 - The Bodega AI net difference is required and may be positive or negative, with
   up to two decimal places.
 - Reports must be editable after saving.

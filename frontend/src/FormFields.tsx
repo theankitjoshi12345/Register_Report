@@ -55,7 +55,7 @@ export function Items({ name, title, values, onChange, errors }: {
           className={`${buttonClass} px-3 py-2 text-xs text-teal-800`}><Plus size={14} /> Add amount</button>
       </div>
       <FieldError name={name} errors={errors} />
-      {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Choose <strong>+</strong> when the customer was charged and <strong>−</strong> when the customer paid the store.</p>}
+      {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Choose <strong>+</strong> when a ticket is created for the customer and <strong>−</strong> when the customer pays the ticket.</p>}
       {values.length === 0 ? <p className="text-sm text-slate-500">Nothing added.</p> : values.map((item, index) => (
         <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]" key={`${name}-${index}`}>
           <Amount name={`${name}.${index}.amount`} label={`${title} amount ${index + 1}`} value={item.amount}
