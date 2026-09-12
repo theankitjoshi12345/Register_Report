@@ -45,6 +45,16 @@ class ScratchOffSalesTests(SimpleTestCase):
         self.assertEqual(result["slots"][1]["tickets_sold"], 7)
         self.assertEqual(result["total_sales"], Decimal("140.00"))
 
+    def test_missing_prior_number_uses_zero_as_the_starting_counter(self):
+        result = calculate_scratch_off_sales(
+            [{"slot_number": 8, "previous_number": None, "ending_number": 6, "new_roll_count": 1}]
+        )
+
+        self.assertEqual(result["slots"][8]["starting_number"], 0)
+        self.assertEqual(result["slots"][8]["tickets_sold"], 6)
+        self.assertEqual(result["slots"][8]["sales"], Decimal("18.00"))
+        self.assertEqual(result["total_sales"], Decimal("18.00"))
+
     def test_sales_use_the_difference_between_closing_and_opening_numbers(self):
         result = calculate_scratch_off_sales(
             [{"slot_number": 1, "previous_number": "005", "ending_number": "012"}]
@@ -85,7 +95,7 @@ class DailyReportCalculationTests(SimpleTestCase):
     def test_all_report_comparisons_and_gas_difference_are_calculated(self):
         result = calculate_daily_report(
             {
-                "lottery_terminal_sales": "80.00",
+                "lottery_terminal_sales": "100.00",
                 "lottery_terminal_payout": "25.00",
                 "phone_card_actual_sales": "60.00",
                 "bodega_net_difference": "-1.25",

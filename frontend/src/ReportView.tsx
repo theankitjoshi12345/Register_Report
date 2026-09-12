@@ -78,7 +78,7 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
             const notRecorded = row.recorded === false || !result
             return <tr key={row.slot_number} className="border-b border-slate-100 last:border-0">
               <th scope="row" className="py-2 pr-3">#{row.slot_number}</th>
-              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.starting_number, 'No prior number')}</td>
+              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.starting_number, '000')}</td>
               <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.ending_number, 'Roll sold out')}</td>
               <td className="px-3">{notRecorded ? '—' : result.new_roll_count}</td>
               <td className="pl-3 font-semibold">{notRecorded ? '—' : money(result.sales)}</td>

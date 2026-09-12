@@ -91,7 +91,7 @@ class StoreAccessTests(TestCase):
         self.client.force_login(self.other_owner)
         other = self.post_close(self.other_store, scratch_offs=[{"slot_number": 1, "ending_number": 2}])
         self.assertEqual(other.status_code, 201, other.content)
-        self.assertEqual(other.json()["calculated"]["scratch_off"]["sales"], "60.00")
+        self.assertEqual(other.json()["calculated"]["scratch_off"]["sales"], "40.00")
         next_day = self.post_close(self.other_store, report_date="2026-09-11", scratch_offs=[{"slot_number": 1, "ending_number": 3}])
         self.assertEqual(next_day.status_code, 201, next_day.content)
         self.assertEqual(next_day.json()["calculated"]["scratch_off"]["sales"], "20.00")

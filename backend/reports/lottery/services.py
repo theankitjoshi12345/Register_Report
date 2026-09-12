@@ -79,7 +79,12 @@ def calculate_scratch_off_sales(readings):
                 and ending_number is not None and ending_number < previous_number):
             new_roll_count = 1
         roll_size = slot.max_ticket_number + 1
+        starting_number = 0 if previous_number is None else previous_number
         current_roll_sold = roll_size if ending_number is None else ending_number + 1
+        if previous_number is None and ending_number is not None:
+            # With no prior close, 000 is the baseline counter. For example,
+            # ending 006 represents six counter steps, not tickets 000–006.
+            current_roll_sold = ending_number
         if new_roll_count:
             # With no active previous roll, the counter counts all rolls opened.
             prior_remaining = (roll_size if initial_roll_active else 0) if previous_number is None else slot.max_ticket_number - previous_number
@@ -91,7 +96,10 @@ def calculate_scratch_off_sales(readings):
                 raise ValidationError({f"scratch_offs.{index}.new_roll_count": f"Scratch-off slot {slot_number} was exhausted; add a new roll before entering a counter."})
             tickets_sold = 0
         elif previous_number is None:
-            tickets_sold = 0 if ending_number is None and not initial_roll_active else current_roll_sold
+            if ending_number is None:
+                tickets_sold = slot.max_ticket_number if initial_roll_active else 0
+            else:
+                tickets_sold = current_roll_sold
         elif ending_number is None:
             tickets_sold = slot.max_ticket_number - previous_number
         else:
@@ -102,7 +110,7 @@ def calculate_scratch_off_sales(readings):
             "ticket_price": slot.ticket_price,
             "sales": sales,
             "new_roll_count": new_roll_count,
-            "starting_number": previous_number,
+            "starting_number": starting_number,
             "ending_number": ending_number,
             "ending_exhausted": ending_number is None and (exhausted or previous_number is not None or new_roll_count > 0 or initial_roll_active),
         }

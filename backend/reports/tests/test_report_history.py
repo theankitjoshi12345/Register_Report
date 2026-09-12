@@ -48,7 +48,7 @@ class ReportInputTests(SimpleTestCase):
 
     def test_multiple_initial_new_rolls_count_completed_rolls(self):
         result = calculate_scratch_off_sales([reading(2, 3)])
-        self.assertEqual(result["slots"][1]["tickets_sold"], 53)
+        self.assertEqual(result["slots"][1]["tickets_sold"], 52)
         self.assertEqual(calculate_scratch_off_sales([reading(None, 2)])["slots"][1]["tickets_sold"], 50)
 
     def test_ticket_amounts_are_signed_but_other_line_items_remain_nonnegative(self):
@@ -64,7 +64,7 @@ class ReportInputTests(SimpleTestCase):
             with self.subTest(field=field), self.assertRaises(ValidationError):
                 calculate_daily_report(report_payload(**{field: [{"amount": "-1.00"}]}))
 
-    def test_last_sold_convention_conserves_every_catalog_roll(self):
+    def test_zero_baseline_conserves_every_catalog_counter_range(self):
         for slot in SCRATCH_OFF_SLOTS:
             with self.subTest(slot=slot.slot_number):
                 middle = slot.max_ticket_number // 2
@@ -73,12 +73,12 @@ class ReportInputTests(SimpleTestCase):
                     **reading(None, slot=slot.slot_number), "previous_number": middle,
                 }])
                 sold = first["slots"][slot.slot_number]["tickets_sold"] + finished["slots"][slot.slot_number]["tickets_sold"]
-                self.assertEqual(sold, slot.max_ticket_number + 1)
+                self.assertEqual(sold, slot.max_ticket_number)
                 replacement = calculate_scratch_off_sales([{
                     **reading(2, count=2, slot=slot.slot_number), "previous_number": middle,
                 }])
                 total_with_replacements = first["slots"][slot.slot_number]["tickets_sold"] + replacement["slots"][slot.slot_number]["tickets_sold"]
-                self.assertEqual(total_with_replacements, 2 * (slot.max_ticket_number + 1) + 3)
+                self.assertEqual(total_with_replacements, 2 * slot.max_ticket_number + 4)
                 day = calculate_scratch_off_sales([{
                     **reading(2, count=2, slot=slot.slot_number), "initial_roll_active": True,
                 }])
@@ -167,20 +167,20 @@ class ReportHistoryTests(TestCase):
         bad = self.client.post("/api/reports/", report_payload("2026-09-11", scratch_offs=[reading(2)]), content_type="application/json")
         self.assertEqual(bad.status_code, 400)
         resumed = self.create("2026-09-11", readings=[reading(2, 1)])
-        self.assertEqual(self.sales(resumed), "60.00")
+        self.assertEqual(self.sales(resumed), "40.00")
 
     def test_initial_blank_does_not_invent_inventory_or_exhaust_a_roll(self):
         initial = self.create("2026-09-09", readings=[reading(None)])
         self.assertEqual(self.sales(initial), "0.00")
         self.assertFalse(DailyReport.objects.get(pk=initial["id"]).scratch_off_rolls.get().ending_exhausted)
         first_counter = self.create(readings=[reading(2)])
-        self.assertEqual(self.sales(first_counter), "60.00")
+        self.assertEqual(self.sales(first_counter), "40.00")
 
     def test_first_day_exhausted_shift_can_be_closed_for_the_whole_day(self):
         self.create(close_type="shift", readings=[reading(20)])
         self.create(close_type="shift", readings=[reading(None)])
         day = self.create(readings=[reading(None)])
-        self.assertEqual(self.sales(day), "500.00")
+        self.assertEqual(self.sales(day), "480.00")
         tomorrow = self.create("2026-09-11", readings=[reading(None)])
         self.assertEqual(self.sales(tomorrow), "0.00")
 
@@ -188,7 +188,7 @@ class ReportHistoryTests(TestCase):
         first = self.create(close_type="shift", readings=[reading(20)])
         second = self.create(close_type="shift", readings=[reading(None)])
         day = self.create(readings=[reading(None)])
-        self.assertEqual(self.sales(first), "420.00")
+        self.assertEqual(self.sales(first), "400.00")
         self.assertEqual(self.sales(second), "80.00")
         self.assertEqual(Decimal(self.sales(first)) + Decimal(self.sales(second)), Decimal(self.sales(day)))
 
@@ -197,7 +197,7 @@ class ReportHistoryTests(TestCase):
         second = self.create(close_type="shift", readings=[reading(2, 2)])
         day = self.create(readings=[reading(2, 2)])
         self.assertEqual(Decimal(self.sales(first)) + Decimal(self.sales(second)), Decimal(self.sales(day)))
-        self.assertEqual(self.sales(day), "1060.00")
+        self.assertEqual(self.sales(day), "1040.00")
 
     def test_every_catalog_slots_shift_sales_match_full_day_sales(self):
         self.create("2026-09-09", readings=[reading(5, slot=slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
@@ -261,7 +261,7 @@ class ReportHistoryTests(TestCase):
         second = self.create("2026-09-10", readings=[reading(15)])
         response = self.patch(first, {"report_date": "2026-09-11", "scratch_offs": [reading(18)]})
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(self.sales(second), "320.00")
+        self.assertEqual(self.sales(second), "300.00")
         self.assertEqual(self.sales(first), "60.00")
 
     def test_legacy_missing_payment_remains_unknown_during_history_replay(self):

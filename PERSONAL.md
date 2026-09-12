@@ -18,6 +18,10 @@ Scratch-off ending numbers must be whole numbers within the valid range for the
 game. Decimal values are not allowed, but users may leave an ending number empty.
 This allows the application to calculate actual scratch-off sales.
 
+When a slot has no prior ending number, its starting counter defaults to `000`.
+The first close uses `ending number - 000`; for example, ending number `006` on a
+$3 ticket produces `(6 - 0) × $3 = $18`.
+
 The lottery terminal provides two values for the user to enter: actual instant-
 ticket sales and actual payouts. The gas register and Bodega AI register each
 provide lottery sales and lottery payout values.
@@ -133,6 +137,7 @@ All of these items must be organized into steps:
 - Scratch-off counters accept either a valid whole-number ticket counter or an
   empty/null value. An empty ending counter means that all tickets remaining in
   that roll were sold.
+- A missing prior counter defaults to `000` for the first sales calculation.
 - When an ending counter is lower than the previous ending counter and the user
   entered zero new rolls, the application automatically records one new roll.
 - Scratch-off sales use the ticket price and the clarified roll formula:

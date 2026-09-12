@@ -145,7 +145,7 @@ def _persist_calculation(report, calculated, readings, baseline):
         ScratchOffRoll(
             report=report, slot_number=reading["slot_number"],
             last_night_number=baseline.get(reading["slot_number"], (None, False))[0],
-            starting_number=baseline.get(reading["slot_number"], (None, False))[0],
+            starting_number=calculated["scratch_off"]["slots"][reading["slot_number"]]["starting_number"],
             ending_number=reading["ending_number"], new_roll_counter=reading["new_roll_count"] + 1,
             ending_exhausted=calculated["scratch_off"]["slots"][reading["slot_number"]]["ending_exhausted"],
         )

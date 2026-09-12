@@ -81,7 +81,7 @@ export function ScratchFields({ form, catalog, errors, onChange }: {
       </p>
       <p className="mb-3 text-sm text-slate-600">Ending numbers must be whole numbers. 020 means ticket 020 was the last ticket sold; the remaining tickets start at 021. Leave the number empty when the roll sold out. Enter 0 new rolls when none were added.</p>
       <p className="mb-3 text-sm text-slate-600">If tonight's ending number is lower than the prior ending number, the report automatically counts one new roll unless you enter a larger number of new rolls.</p>
-      <p className="mb-5 text-sm text-slate-600">For a slot with no earlier reading, an empty entry counts no sales. Its first ticket number counts sales from 000, so enter accurate opening history before your first close.</p>
+      <p className="mb-5 text-sm text-slate-600">For a slot with no earlier reading, the starting counter defaults to 000. An ending counter of 006 therefore counts six ticket steps. An empty entry counts no sales.</p>
       <FieldError name="scratch_offs" errors={errors} />
       <div className="overflow-x-auto rounded-2xl border border-slate-200">
         <table className="w-full min-w-[530px] text-left text-sm">
