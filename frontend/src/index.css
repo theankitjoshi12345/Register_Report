@@ -14,9 +14,26 @@
   color-scheme: light;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select {
+  touch-action: manipulation;
+}
+
+@media (max-width: 639px) {
+  .mobile-action-bar {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
 
 ::selection {

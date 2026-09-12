@@ -12,10 +12,10 @@ function Login({ onLogin, busy }: { onLogin: (username: string, password: string
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   return (
-    <main className="mx-auto max-w-md px-5 py-14">
-      <h1 className="text-3xl font-bold">Sign in to your store</h1>
+    <main className="mx-auto max-w-md px-4 py-10 sm:px-5 sm:py-14">
+      <h1 className="text-2xl font-bold sm:text-3xl">Sign in to your store</h1>
       <p className="mt-3 text-sm leading-6 text-slate-600">Your store reports are available to authorized team members.</p>
-      <form onSubmit={(event) => { event.preventDefault(); onLogin(username, password) }} className="mt-7 space-y-5 rounded-2xl border border-slate-200 bg-white p-6">
+      <form onSubmit={(event) => { event.preventDefault(); onLogin(username, password) }} className="mt-7 space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
         <label className="block text-sm font-medium">Username<input required autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} className={`${inputClass} mt-2`} /></label>
         <label className="block text-sm font-medium">Password<input required type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} className={`${inputClass} mt-2`} /></label>
         <button type="submit" disabled={busy} className={`${primaryClass} w-full`}>{busy ? 'Signing in…' : 'Sign in'}</button>
@@ -196,23 +196,23 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-900">
       <Header reports={reports} onSelect={(report) => { setView(report); setError(''); setErrors({}) }} session={session} storeId={storeId} onStoreChange={changeStore} onLogout={() => { void logout() }} />
-      {error && <div role="alert" className="mx-auto mt-5 max-w-6xl px-5 sm:px-8"><div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p>{error}</p>
+      {error && <div role="alert" className="mx-auto mt-5 max-w-6xl px-4 sm:px-8"><div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p>{error}</p>
         {Object.keys(errors).length > 0 && <ul className="mt-2 space-y-1">{Object.entries(errors).map(([path, message]) => <li key={path}><button type="button" className="text-left underline underline-offset-2" onClick={() => { const targetStep = errorStep({ [path]: message }); if (targetStep != null) setStep(targetStep); requestAnimationFrame(() => { const input = Array.from(formRef.current?.elements ?? []).find((element) => (element as HTMLInputElement).name === path); (input as HTMLElement | undefined)?.focus() }) }}>{path === 'form' ? message : `${path.replaceAll('_', ' ')}: ${message}`}</button></li>)}</ul>}
         {!Object.keys(errors).length && !authBusy && session?.user && <button type="button" className="mt-2 font-semibold underline" onClick={() => { setError(''); if (!session) setReload((value) => value + 1); else if (session.user) setHistoryReload((value) => value + 1) }}>Retry</button>}
       </div></div>}
-      {notice && <div role="status" className="mx-auto mt-5 max-w-6xl px-5 sm:px-8"><p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{notice} <button type="button" className="font-semibold underline" onClick={() => { setNotice(''); setHistoryReload((value) => value + 1) }}>Refresh history</button></p></div>}
+      {notice && <div role="status" className="mx-auto mt-5 max-w-6xl px-4 sm:px-8"><p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{notice} <button type="button" className="font-semibold underline" onClick={() => { setNotice(''); setHistoryReload((value) => value + 1) }}>Refresh history</button></p></div>}
       {loading ? <p role="status" className="p-12 text-center text-slate-600">Loading your store…</p>
-        : !session ? <main className="mx-auto max-w-md px-5 py-12"><h1 className="text-2xl font-bold">Unable to load store setup</h1><p className="mt-3 text-sm text-slate-600">Retry to load the sign-in service and scratch-off catalog.</p><button type="button" onClick={() => setReload((value) => value + 1)} className={`${primaryClass} mt-5`}>Retry setup</button></main>
+        : !session ? <main className="mx-auto max-w-md px-4 py-10 sm:px-5 sm:py-12"><h1 className="text-2xl font-bold">Unable to load store setup</h1><p className="mt-3 text-sm text-slate-600">Retry to load the sign-in service and scratch-off catalog.</p><button type="button" onClick={() => setReload((value) => value + 1)} className={`${primaryClass} mt-5 w-full sm:w-auto`}>Retry setup</button></main>
           : !session.user ? <Login onLogin={(username, password) => { void login(username, password) }} busy={authBusy} />
-          : storeId == null ? <main className="mx-auto max-w-2xl p-8"><h1 className="text-2xl font-bold">No store access yet</h1><p className="mt-3 text-slate-600">Ask your administrator to add your account to a store.</p></main>
+          : storeId == null ? <main className="mx-auto max-w-2xl px-4 py-10 sm:p-8"><h1 className="text-2xl font-bold">No store access yet</h1><p className="mt-3 text-slate-600">Ask your administrator to add your account to a store.</p></main>
             : <>
-              {pending.length > 0 && <aside aria-label="Pending day closes" className="mx-auto mt-5 max-w-6xl px-5 sm:px-8"><div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="flex items-center gap-2 font-semibold"><CircleAlert size={16} /> Day close still needed</p><p className="mt-1">These dates have shift reports and need a complete day close.</p><div className="mt-3 flex flex-wrap gap-2">{pending.map((date) => <button type="button" key={date} onClick={() => reset(date)} className={`${buttonClass} border-amber-300 bg-white py-2`}>Close {date}</button>)}</div></div></aside>}
-              {reportsLoading && <p role="status" className="mx-auto mt-4 max-w-6xl px-5 text-sm text-slate-600 sm:px-8">Loading report history…</p>}
-              {view ? <ReportView report={view} onEdit={editReport} onNew={() => reset()} /> : <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-                <div className="mb-7"><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Your store, in balance</p><h1 className="text-3xl font-bold">{editing ? 'Edit report' : `Close the ${form.close_type}`}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Enter machine and register figures. The report calculates differences and remains available by date.</p></div>
-                <nav aria-label="Close progress" className="mb-6 flex gap-1 overflow-x-auto pb-2">{steps.map(({ label }, index) => <button type="button" key={label} disabled={index > step || saving} aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)} className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${index === step ? 'bg-teal-800 text-white' : index < step ? 'bg-teal-100 text-teal-800' : 'bg-white text-slate-500'}`}><span className="flex size-5 items-center justify-center rounded-full bg-black/10">{index < step ? <Check size={12} /> : index + 1}</span>{label}</button>)}</nav>
-                <form ref={formRef} onSubmit={(event) => { void submit(event) }} className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-                  <fieldset disabled={saving} className="min-w-0 border-0 p-5 sm:p-8">
+              {pending.length > 0 && <aside aria-label="Pending day closes" className="mx-auto mt-5 max-w-6xl px-4 sm:px-8"><div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="flex items-center gap-2 font-semibold"><CircleAlert className="shrink-0" size={16} /> Day close still needed</p><p className="mt-1">These dates have shift reports and need a complete day close.</p><div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">{pending.map((date) => <button type="button" key={date} onClick={() => reset(date)} className={`${buttonClass} border-amber-300 bg-white py-2`}>Close {date}</button>)}</div></div></aside>}
+              {reportsLoading && <p role="status" className="mx-auto mt-4 max-w-6xl px-4 text-sm text-slate-600 sm:px-8">Loading report history…</p>}
+              {view ? <ReportView report={view} onEdit={editReport} onNew={() => reset()} /> : <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
+                <div className="mb-6 sm:mb-7"><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Your store, in balance</p><h1 className="text-2xl font-bold sm:text-3xl">{editing ? 'Edit report' : `Close the ${form.close_type}`}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Enter machine and register figures. The report calculates differences and remains available by date.</p></div>
+                <nav aria-label="Close progress" className="-mx-4 mb-5 flex snap-x gap-1 overflow-x-auto px-4 pb-2 sm:mx-0 sm:mb-6 sm:px-0">{steps.map(({ label }, index) => <button type="button" key={label} disabled={index > step || saving} aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)} className={`flex min-h-10 shrink-0 snap-start items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${index === step ? 'bg-teal-800 text-white' : index < step ? 'bg-teal-100 text-teal-800' : 'bg-white text-slate-500'}`}><span className="flex size-5 items-center justify-center rounded-full bg-black/10">{index < step ? <Check size={12} /> : index + 1}</span>{label}</button>)}</nav>
+                <form ref={formRef} onSubmit={(event) => { void submit(event) }} className="rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
+                  <fieldset disabled={saving} className="min-w-0 border-0 p-4 sm:p-8">
                     <legend className="sr-only">{steps[step].label}</legend>
                     <h2 ref={headingRef} tabIndex={-1} className={`${step === 2 ? 'sr-only' : 'mb-5 text-xl font-bold'} outline-none`}>{step === 0 ? 'Choose your close' : steps[step].label}</h2>
                     {step === 0 && <div className="space-y-6">
@@ -227,10 +227,10 @@ function App() {
                     {step === 3 && amountGroup(bodegaFields)}
                     {step === 4 && <div className="space-y-6">{amountGroup(gasFields)}<p className="text-sm leading-6 text-slate-600">Phone card sales are prepaid phone cards sold at this register. Card payment without including fee is the debit and credit payment total from the separate card machine.</p>{itemGroups.map(({ key, title }) => <Items key={key} name={key} title={title} values={form[key]} onChange={(value) => update(key, value)} errors={errors} />)}</div>}
                   </fieldset>
-                  <div className="flex justify-between border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:px-8">
-                    <button type="button" disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className={`${buttonClass} border-transparent disabled:invisible`}><ArrowLeft size={16} /> Back</button>
-                    {step < steps.length - 1 ? <button type="submit" disabled={catalog.length !== 20} className={primaryClass}>Continue <ArrowRight size={16} /></button>
-                      : <button type="submit" disabled={saving} className={primaryClass}>{saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}{saving ? 'Saving…' : editing ? 'Save changes' : 'Save report'}</button>}
+                  <div className="mobile-action-bar sticky bottom-0 z-10 flex gap-3 rounded-b-2xl border-t border-slate-100 bg-slate-50/95 px-4 py-3 backdrop-blur sm:static sm:justify-between sm:rounded-b-3xl sm:px-8 sm:py-4">
+                    <button type="button" disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className={`${buttonClass} flex-1 border-transparent disabled:invisible sm:flex-none`}><ArrowLeft size={16} /> Back</button>
+                    {step < steps.length - 1 ? <button type="submit" disabled={catalog.length !== 20} className={`${primaryClass} flex-1 sm:flex-none`}>Continue <ArrowRight size={16} /></button>
+                      : <button type="submit" disabled={saving} className={`${primaryClass} flex-1 sm:flex-none`}>{saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}{saving ? 'Saving…' : editing ? 'Save changes' : 'Save report'}</button>}
                   </div>
                 </form>
               </main>}

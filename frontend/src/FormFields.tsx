@@ -1,8 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { CatalogSlot, FieldErrors, FormState, ItemKey, LineItem, ScratchOff } from './report'
 
-export const inputClass = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100 aria-invalid:border-rose-600'
-export const buttonClass = 'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-50'
+export const inputClass = 'min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100 aria-invalid:border-rose-600 sm:text-sm'
+export const buttonClass = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-50'
 export const primaryClass = `${buttonClass} border-teal-800 bg-teal-800 text-white hover:bg-teal-900`
 
 export function FieldError({ name, errors }: { name: string; errors: FieldErrors }) {
@@ -36,7 +36,7 @@ export function Items({ name, title, values, onChange, errors }: {
 }) {
   return (
     <section aria-label={title} className="rounded-2xl border border-slate-200 p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-semibold">{title}</h3>
         <button type="button" aria-label={`Add ${title.toLowerCase()} amount`} onClick={() => onChange([...values, { amount: '', description: '' }])}
           className={`${buttonClass} px-3 py-2 text-xs text-teal-800`}><Plus size={14} /> Add amount</button>
@@ -59,7 +59,7 @@ export function Items({ name, title, values, onChange, errors }: {
           </div>
           <button type="button" aria-label={`Remove ${title.toLowerCase()} item ${index + 1}`}
             onClick={() => onChange(values.filter((_, rowIndex) => rowIndex !== index))}
-            className={`${buttonClass} mt-7 self-start px-3 text-slate-500 hover:text-rose-700`}><Trash2 size={17} /></button>
+            className={`${buttonClass} mt-1 w-full self-start px-3 text-slate-500 hover:text-rose-700 sm:mt-7 sm:w-auto`}><Trash2 size={17} /><span className="sm:sr-only">Remove</span></button>
           <FieldError name={`${name}.${index}`} errors={errors} />
         </div>
       ))}
@@ -83,19 +83,20 @@ export function ScratchFields({ form, catalog, errors, onChange }: {
       <p className="mb-3 text-sm text-slate-600">If tonight's ending number is lower than the prior ending number, the report automatically counts one new roll unless you enter a larger number of new rolls.</p>
       <p className="mb-5 text-sm text-slate-600">For a slot with no earlier reading, the starting counter defaults to 000. An ending counter of 006 therefore counts six ticket steps. An empty entry counts no sales.</p>
       <FieldError name="scratch_offs" errors={errors} />
-      <div className="overflow-x-auto rounded-2xl border border-slate-200">
-        <table className="w-full min-w-[530px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs text-slate-600"><tr><th className="px-4 py-3">Slot / price</th><th className="px-4 py-3">Last ticket sold</th><th className="px-4 py-3">New rolls added</th></tr></thead>
-          <tbody>{form.scratch_offs.map((item, index) => {
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/60 md:overflow-x-auto md:bg-white">
+        <table className="block w-full text-left text-sm md:table md:min-w-[530px]">
+          <thead className="hidden bg-slate-50 text-xs text-slate-600 md:table-header-group"><tr><th className="px-4 py-3">Slot / price</th><th className="px-4 py-3">Last ticket sold</th><th className="px-4 py-3">New rolls added</th></tr></thead>
+          <tbody className="grid gap-3 p-3 md:table-row-group md:p-0">{form.scratch_offs.map((item, index) => {
             const slot = catalog.find((row) => row.slot_number === item.slot_number)
             const updateRow = (change: Partial<ScratchOff>) => onChange(form.scratch_offs.map((row, rowIndex) => rowIndex === index ? { ...row, ...change, recorded: true } : row))
             const endingName = `scratch_offs.${index}.ending_number`
             const rollsName = `scratch_offs.${index}.new_roll_count`
             return (
-              <tr className="border-t border-slate-100" key={item.slot_number}>
-                <th scope="row" className="px-4 py-3"><span className="block">#{item.slot_number}</span><span className="font-normal text-slate-500">${slot?.ticket_price ?? '—'}</span></th>
-                <td className="px-4 py-3">
-                  <input name={endingName} aria-label={`Slot ${item.slot_number} ending number`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3}
+              <tr className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:table-row md:rounded-none md:border-0 md:border-t md:border-slate-100 md:p-0 md:shadow-none" key={item.slot_number}>
+                <th scope="row" className="col-span-2 flex items-center justify-between md:table-cell md:px-4 md:py-3"><span className="block">Slot #{item.slot_number}</span><span className="font-normal text-slate-500">${slot?.ticket_price ?? '—'}</span></th>
+                <td className="p-0 md:px-4 md:py-3">
+                  <label htmlFor={endingName} className="mb-2 block text-xs font-medium text-slate-600 md:sr-only">Last ticket sold</label>
+                  <input id={endingName} name={endingName} aria-label={`Slot ${item.slot_number} ending number`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3}
                     placeholder={`000–${String(slot?.max_ticket_number ?? 0).padStart(3, '0')}`} value={item.ending_number}
                     aria-invalid={Boolean(errors[endingName])} aria-describedby={errors[endingName] ? `${endingName}-error` : undefined}
                     onChange={(event) => {
@@ -111,8 +112,9 @@ export function ScratchFields({ form, catalog, errors, onChange }: {
                   {item.recorded === false && <p className="mt-2 text-xs text-slate-500">Not recorded. Leave unchanged to keep the earlier reading.</p>}
                   <FieldError name={endingName} errors={errors} /><FieldError name={`scratch_offs.${index}`} errors={errors} />
                 </td>
-                <td className="w-40 px-4 py-3">
-                  <input name={rollsName} aria-label={`Slot ${item.slot_number} new rolls added`} required type="number" min="0" max="32766" step="1"
+                <td className="w-auto p-0 md:w-40 md:px-4 md:py-3">
+                  <label htmlFor={rollsName} className="mb-2 block text-xs font-medium text-slate-600 md:sr-only">New rolls added</label>
+                  <input id={rollsName} name={rollsName} aria-label={`Slot ${item.slot_number} new rolls added`} required type="number" min="0" max="32766" step="1"
                     value={item.new_roll_count} onChange={(event) => updateRow({ new_roll_count: event.target.value })}
                     aria-invalid={Boolean(errors[rollsName])} aria-describedby={errors[rollsName] ? `${rollsName}-error` : undefined} className={inputClass} />
                   <FieldError name={rollsName} errors={errors} />

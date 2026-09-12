@@ -5,11 +5,11 @@ import type { Comparison, Report } from './report'
 
 function ComparisonRow({ label, value }: { label: string; value: Comparison }) {
   return (
-    <tr className="border-b border-slate-100 last:border-0">
-      <th scope="row" className="py-4 pr-4 text-left font-semibold">{label}</th>
-      <td className="px-3 py-4">{money(value.expected)}</td>
-      <td className="px-3 py-4">{money(value.actual)}</td>
-      <td className="py-4 pl-3"><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${value.status === 'match' ? 'bg-teal-50 text-teal-800' : 'bg-amber-50 text-amber-800'}`}>
+    <tr className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl border border-slate-200 p-4 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:border-slate-100 sm:p-0 sm:last:border-0">
+      <th scope="row" className="col-span-2 text-left font-semibold sm:table-cell sm:py-4 sm:pr-4">{label}</th>
+      <td className="min-w-0 sm:table-cell sm:px-3 sm:py-4"><span className="block text-xs text-slate-500 sm:hidden">Expected</span><span className="break-words">{money(value.expected)}</span></td>
+      <td className="min-w-0 sm:table-cell sm:px-3 sm:py-4"><span className="block text-xs text-slate-500 sm:hidden">Actual</span><span className="break-words">{money(value.actual)}</span></td>
+      <td className="col-span-2 mt-1 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 sm:table-cell sm:border-0 sm:py-4 sm:pl-3"><span className="text-xs text-slate-500 sm:hidden">Difference</span><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${value.status === 'match' ? 'bg-teal-50 text-teal-800' : 'bg-amber-50 text-amber-800'}`}>
         {value.status === 'match' ? <Check size={13} /> : <CircleAlert size={13} />}
         {value.status === 'match' ? 'Matches' : value.status === 'incomplete' ? 'Needs entry' : `Off ${money(value.difference)}`}
       </span></td>
@@ -23,37 +23,37 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
   const { calculated } = report
   const entered = formFromReport(report)
   return (
-    <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-        <div>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4 sm:mb-8">
+        <div className="min-w-0">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-teal-700">{report.close_type} close</p>
-          <h1 className="text-3xl font-bold">Report for {report.report_date}</h1>
-          {report.close_label && <p className="mt-2 text-slate-600">{report.close_label}</p>}
+          <h1 className="text-2xl font-bold sm:text-3xl">Report for {report.report_date}</h1>
+          {report.close_label && <p className="mt-2 break-words text-slate-600">{report.close_label}</p>}
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => onEdit(report)} className={buttonClass}><Pencil size={16} /> Edit</button>
-          <button type="button" onClick={onNew} className={primaryClass}><Plus size={16} /> New close</button>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <button type="button" onClick={() => onEdit(report)} className={`${buttonClass} w-full sm:w-auto`}><Pencil size={16} /> Edit</button>
+          <button type="button" onClick={onNew} className={`${primaryClass} w-full sm:w-auto`}><Plus size={16} /> New close</button>
         </div>
       </div>
       {calculated.registers.gas_net_difference == null && <p role="status" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This older report needs its card payment amount. Edit the report to complete the Verifone balance.</p>}
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-2xl bg-slate-950 p-5 text-white">
           <h2 className="text-sm text-slate-300">Register balance</h2>
-          <dl className="mt-5 grid grid-cols-2 gap-4">
-            <div><dt className="text-sm text-slate-400">Bodega AI</dt><dd className="text-2xl font-bold">{money(calculated.registers.bodega_net_difference)}</dd></div>
-            <div><dt className="text-sm text-slate-400">Verifone</dt><dd className="text-2xl font-bold">{money(calculated.registers.gas_net_difference)}</dd></div>
+          <dl className="mt-5 grid gap-4 min-[360px]:grid-cols-2">
+            <div className="min-w-0"><dt className="text-sm text-slate-400">Bodega AI</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(calculated.registers.bodega_net_difference)}</dd></div>
+            <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(calculated.registers.gas_net_difference)}</dd></div>
           </dl>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold"><WalletCards size={17} /> Scratch-off sales</h2>
-          <p className="mt-5 text-3xl font-bold">{money(calculated.scratch_off.sales)}</p>
+          <p className="mt-5 break-words text-2xl font-bold sm:text-3xl">{money(calculated.scratch_off.sales)}</p>
         </section>
       </div>
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
         <h2 className="text-xl font-bold">Reconciliation</h2>
-        <div className="overflow-x-auto"><table className="mt-3 w-full min-w-[520px] text-sm">
-          <thead><tr className="text-left text-xs uppercase text-slate-500"><th className="py-2">Comparison</th><th className="px-3">Expected</th><th className="px-3">Actual</th><th className="pl-3">Difference</th></tr></thead>
-          <tbody><ComparisonRow label="Phone card sales" value={calculated.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales" value={calculated.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={calculated.comparisons.lottery_payout} /></tbody>
+        <div><table className="mt-3 block w-full text-sm sm:table sm:min-w-[520px]">
+          <thead className="hidden sm:table-header-group"><tr className="text-left text-xs uppercase text-slate-500"><th className="py-2">Comparison</th><th className="px-3">Expected</th><th className="px-3">Actual</th><th className="pl-3">Difference</th></tr></thead>
+          <tbody className="grid gap-3 sm:table-row-group"><ComparisonRow label="Phone card sales" value={calculated.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales" value={calculated.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={calculated.comparisons.lottery_payout} /></tbody>
         </table></div>
       </section>
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
@@ -62,7 +62,7 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
           <div><dt className="text-xs text-slate-500">Business date</dt><dd className="font-semibold">{report.report_date}</dd></div>
           <div><dt className="text-xs text-slate-500">Close type</dt><dd className="font-semibold">{report.close_type === 'day' ? 'Day close' : 'Shift close'}</dd></div>
           <div><dt className="text-xs text-slate-500">Close name</dt><dd className="font-semibold">{report.close_label || 'None'}</dd></div>
-          {fields.map(([key, label]) => <div key={key}><dt className="text-xs text-slate-500">{label}</dt><dd className="font-semibold">{money(calculated.inputs[key])}</dd></div>)}
+          {fields.map(([key, label]) => <div className="min-w-0" key={key}><dt className="text-xs text-slate-500">{label}</dt><dd className="break-words font-semibold">{money(calculated.inputs[key])}</dd></div>)}
         </dl>
         <div className="mt-7 grid gap-5 md:grid-cols-3">{itemGroups.map(({ key, title }) => (
           <section key={key} aria-label={`Entered ${title.toLowerCase()}`} className="rounded-xl bg-slate-50 p-4">
@@ -71,17 +71,17 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
           </section>
         ))}</div>
         <h3 className="mb-3 mt-7 font-semibold">Scratch-off entries</h3>
-        <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-          <thead><tr className="border-b text-xs text-slate-500"><th className="py-2 pr-3">Slot</th><th className="px-3">Starting number</th><th className="px-3">Ending number</th><th className="px-3">New rolls added</th><th className="pl-3">Value generated</th></tr></thead>
-          <tbody>{entered.scratch_offs.map((row) => {
+        <div><table className="block w-full text-left text-sm md:table">
+          <thead className="hidden md:table-header-group"><tr className="border-b text-xs text-slate-500"><th className="py-2 pr-3">Slot</th><th className="px-3">Starting number</th><th className="px-3">Ending number</th><th className="px-3">New rolls added</th><th className="pl-3">Value generated</th></tr></thead>
+          <tbody className="grid gap-3 md:table-row-group">{entered.scratch_offs.map((row) => {
             const result = calculated.scratch_off.slots?.[String(row.slot_number)]
             const notRecorded = row.recorded === false || !result
-            return <tr key={row.slot_number} className="border-b border-slate-100 last:border-0">
-              <th scope="row" className="py-2 pr-3">#{row.slot_number}</th>
-              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.starting_number, '000')}</td>
-              <td className="px-3">{notRecorded ? 'Not recorded' : ticketNumber(result.ending_number, 'Roll sold out')}</td>
-              <td className="px-3">{notRecorded ? '—' : result.new_roll_count}</td>
-              <td className="pl-3 font-semibold">{notRecorded ? '—' : money(result.sales)}</td>
+            return <tr key={row.slot_number} className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 p-4 md:table-row md:rounded-none md:border-0 md:border-b md:border-slate-100 md:p-0 md:last:border-0">
+              <th scope="row" className="col-span-2 border-b border-slate-100 pb-2 md:table-cell md:border-0 md:py-2 md:pr-3">Slot #{row.slot_number}</th>
+              <td className="min-w-0 md:table-cell md:px-3"><span className="block text-xs text-slate-500 md:hidden">Starting number</span><span className="break-words">{notRecorded ? 'Not recorded' : ticketNumber(result.starting_number, '000')}</span></td>
+              <td className="min-w-0 md:table-cell md:px-3"><span className="block text-xs text-slate-500 md:hidden">Ending number</span><span className="break-words">{notRecorded ? 'Not recorded' : ticketNumber(result.ending_number, 'Roll sold out')}</span></td>
+              <td className="min-w-0 md:table-cell md:px-3"><span className="block text-xs text-slate-500 md:hidden">New rolls added</span>{notRecorded ? '—' : result.new_roll_count}</td>
+              <td className="min-w-0 font-semibold md:table-cell md:pl-3"><span className="block text-xs font-normal text-slate-500 md:hidden">Value generated</span><span className="break-words">{notRecorded ? '—' : money(result.sales)}</span></td>
             </tr>
           })}</tbody>
         </table></div>
