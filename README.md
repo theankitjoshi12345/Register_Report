@@ -2,7 +2,7 @@
 
 A store-closing reconciliation app built with React, TypeScript, Tailwind CSS,
 and Django. Enter machine totals, scratch-off counters, and figures from the
-Bodega AI and gas registers. The app saves a report showing sales/payout
+Bodega AI and Verifone registers. The app saves a report showing sales/payout
 comparisons and register differences.
 
 ## Run locally
@@ -95,7 +95,7 @@ the next request.
 ## Closing a day or shift
 
 The form has five steps: close details, independent totals, scratch-off counters,
-Bodega AI figures, and gas-register figures. Monetary fields are required;
+Bodega AI figures, and Verifone figures. Monetary fields are required;
 explicit zero is accepted. Bodega's net difference may be negative. Tickets,
 vendor payouts, and safe drops are optional lists with amounts and descriptions.
 
@@ -118,18 +118,18 @@ identified, and the transaction leaves the reports unchanged.
 
 | Comparison | Expected | Recorded by the registers |
 | --- | --- | --- |
-| Phone-card sales | Independent phone-card machine sales | Bodega phone-card sales + gas phone-card sales |
-| Lottery sales | Scratch-off sales + lottery terminal sales | Bodega lottery sales + gas lottery sales |
-| Lottery payouts | Lottery terminal payout | Bodega lottery payout + gas lottery payout |
+| Phone-card sales | Independent phone-card machine sales | Bodega phone-card sales + Verifone phone-card sales |
+| Lottery sales | Scratch-off sales + lottery terminal sales | Bodega lottery sales + Verifone lottery sales |
+| Lottery payouts | Lottery terminal payout | Bodega lottery payout + Verifone lottery payout |
 
 Difference = recorded − expected. Exactly zero is a match. Django validates
 money using decimal arithmetic with up to two decimal places and at most
 9,999,999,999.99 per entered amount.
 
-Bodega's net difference is entered directly. Gas net difference is:
+Bodega's net difference is entered directly. Verifone net difference is:
 
 ```text
-Gas total cash sales
+Verifone total cash sales
 − Gas sold through Bodega
 − Safe drops
 − Tickets
@@ -137,11 +137,11 @@ Gas total cash sales
 − Card payment without including fee
 ```
 
-**Phone cards and debit/credit payments are separate entries.** The old
-`gas_card_sales` field represented phone-card sales despite its label. Its saved
-values are preserved under `gas_phone_card_sales`. The new
+**Phone cards and debit/credit payments are separate entries.** The old internal
+`gas_card_sales` field represented Verifone phone-card sales despite its label.
+Its saved values are preserved under `gas_phone_card_sales`. The new
 `gas_card_payment_sales` field supplies the independent card-payment deduction.
-Older reports show an incomplete gas balance until that newly required amount is
+Older reports show an incomplete Verifone balance until that newly required amount is
 entered; no historical payment amount is guessed. After entering it, save the
 report once to store the completed balance.
 

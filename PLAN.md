@@ -4,8 +4,8 @@
 
 - React/TypeScript/Tailwind form with five validated steps.
 - Day and shift closes, report history, and editable saved reports.
-- Independent lottery/phone-card comparisons and gas-register cash reconciliation.
-- Separate gas phone-card sales and independent debit/credit-card payments.
+- Independent lottery/phone-card comparisons and Verifone cash reconciliation.
+- Separate Verifone phone-card sales and independent debit/credit-card payments.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Scratch-off history scoped to each store, including exhausted rolls.
 - Shift counters chained by creation order within a business date; full-day closes
@@ -21,14 +21,14 @@
 
 ## Clarified during the fixes
 
-The existing gas `gas_card_sales` value is **phone-card sales**. It is renamed
+The existing internal `gas_card_sales` value is **phone-card sales**. It is renamed
 `gas_phone_card_sales` without losing stored values. Debit/credit payments used
-in gas cash reconciliation have their own field, `gas_card_payment_sales`.
+in Verifone cash reconciliation have their own field, `gas_card_payment_sales`.
 Historical reports require that newly separate payment figure to complete their
-gas balance; the app does not fabricate it.
+Verifone balance; the app does not fabricate it.
 
 Authentication and store authorization are now included, superseding the earlier
-deferral in the original project notes. `PERSONAL.md` remains unchanged.
+deferral in the original project notes. `PERSONAL.md` reflects the current requirements.
 
 Shift totals and new rolls cover a shift. Day totals and new rolls cover the full
 day. Same-date shift ordering follows report creation order. The form explicitly

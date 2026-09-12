@@ -125,7 +125,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await enter('scratch_offs.1.new_roll_count', '2'); await click('Continue')
   assert.match(currentStep(), /Bodega AI/)
   await fillVisible(); await enter('bodega_net_difference', '-3.25'); await click('Continue')
-  assert.match(currentStep(), /Gas register/)
+  assert.match(currentStep(), /Verifone/)
   await fillVisible(); await enter('gas_phone_card_sales', '17.25'); await enter('gas_card_payment_sales', '98.50')
   for (const [title, key, amount, description] of [['tickets', 'tickets', '+12.50', 'Customer tab'], ['vendor payouts', 'vendor_payouts', '7.00', 'Bread delivery'], ['safe drops', 'safe_drops', '100.00', 'Evening deposit']]) {
     await click(`Add ${title} amount`); await enter(`${key}.0.amount`, amount); await enter(`${key}.0.description`, description)
@@ -241,7 +241,7 @@ test('pending shift dates start a day close and legacy card payments remain visi
   assert.match(container.textContent, /Needs entry/)
   await click('Edit'); await goToGas()
   assert.equal(input('gas_phone_card_sales').value, '12.00'); assert.equal(input('gas_card_payment_sales').value, '')
-  await click('Save changes'); assert.match(currentStep(), /Gas register/)
+  await click('Save changes'); assert.match(currentStep(), /Verifone/)
 })
 
 test('business date uses local calendar components rather than a UTC date', () => {

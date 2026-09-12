@@ -20,10 +20,10 @@ export const bodegaFields = [
   ['bodega_gas_sales', 'Gas sold by Bodega'],
 ] as const
 export const gasFields = [
-  ['gas_cash_sales', 'Gas total cash sales'],
-  ['gas_lottery_sales', 'Gas lottery sales'],
-  ['gas_lottery_payout', 'Gas lottery payout'],
-  ['gas_phone_card_sales', 'Gas phone card sales'],
+  ['gas_cash_sales', 'Verifone total cash sales'],
+  ['gas_lottery_sales', 'Verifone lottery sales'],
+  ['gas_lottery_payout', 'Verifone lottery payout'],
+  ['gas_phone_card_sales', 'Verifone phone card sales'],
   ['gas_card_payment_sales', 'Card payment without including fee'],
 ] as const
 export const fields = [...independentFields, ...bodegaFields, ...gasFields]
@@ -61,7 +61,7 @@ export const steps = [
   { label: 'Independent totals', fields: independentFields.map(([key]) => key) },
   { label: 'Scratch-off count', fields: ['scratch_offs'] },
   { label: 'Bodega AI', fields: bodegaFields.map(([key]) => key) },
-  { label: 'Gas register', fields: [...gasFields.map(([key]) => key), ...itemGroups.map(({ key }) => key)] },
+  { label: 'Verifone', fields: [...gasFields.map(([key]) => key), ...itemGroups.map(({ key }) => key)] },
 ]
 export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 export const initialScratch = (): ScratchOff[] => Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ending_number: '', new_roll_count: 0 }))

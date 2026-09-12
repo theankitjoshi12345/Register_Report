@@ -35,13 +35,13 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
           <button type="button" onClick={onNew} className={primaryClass}><Plus size={16} /> New close</button>
         </div>
       </div>
-      {calculated.registers.gas_net_difference == null && <p role="status" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This older report needs its card payment amount. Edit the report to complete the gas register balance.</p>}
+      {calculated.registers.gas_net_difference == null && <p role="status" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This older report needs its card payment amount. Edit the report to complete the Verifone balance.</p>}
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-2xl bg-slate-950 p-5 text-white">
           <h2 className="text-sm text-slate-300">Register balance</h2>
           <dl className="mt-5 grid grid-cols-2 gap-4">
             <div><dt className="text-sm text-slate-400">Bodega AI</dt><dd className="text-2xl font-bold">{money(calculated.registers.bodega_net_difference)}</dd></div>
-            <div><dt className="text-sm text-slate-400">Gas register</dt><dd className="text-2xl font-bold">{money(calculated.registers.gas_net_difference)}</dd></div>
+            <div><dt className="text-sm text-slate-400">Verifone</dt><dd className="text-2xl font-bold">{money(calculated.registers.gas_net_difference)}</dd></div>
           </dl>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5">

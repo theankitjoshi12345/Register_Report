@@ -20,7 +20,7 @@ class MoneyField(forms.DecimalField):
 class LotteryTotalsForm(forms.Form):
     terminal_instant_sales = MoneyField(label="Terminal actual instant ticket sales")
     terminal_payout = MoneyField(label="Terminal actual payout")
-    gas_lottery_sales = MoneyField(label="Gas register lottery sales")
-    gas_lottery_payout = MoneyField(label="Gas register lottery payout")
+    gas_lottery_sales = MoneyField(label="Verifone lottery sales")
+    gas_lottery_payout = MoneyField(label="Verifone lottery payout")
     bodega_ai_lottery_sales = MoneyField(label="Bodega AI register lottery sales")
     bodega_ai_lottery_payout = MoneyField(label="Bodega AI register lottery payout")

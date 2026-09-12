@@ -23,7 +23,7 @@ The first close uses `ending number - 000`; for example, ending number `006` on 
 $3 ticket produces `(6 - 0) × $3 = $18`.
 
 The lottery terminal provides two values for the user to enter: actual instant-
-ticket sales and actual payouts. The gas register and Bodega AI register each
+ticket sales and actual payouts. Verifone and the Bodega AI register each
 provide lottery sales and lottery payout values.
 
 The backend will add the sales and payout values from both registers and compare
@@ -47,11 +47,11 @@ One phone-card machine provides the actual phone-card sales for the day. The
 backend must compare that amount with the combined phone-card sales entered from
 both POS registers.
 
-## Tickets (gas register only)
+## Tickets (Verifone only)
 
 This store allows known regular customers to receive a ticket and pay the store
 the next day. At the end of the day or shift, the owner will enter the total value
-of tickets created that day on the gas register. This feature does not apply to
+of tickets created that day on Verifone. This feature does not apply to
 the Bodega AI register.
 
 Users must be able to enter multiple optional amounts. Each amount may have an
@@ -60,23 +60,23 @@ at the end of the day or shift. Ticket amounts may be positive or negative. The
 frontend must tell users to enter `+` when a customer is charged and `-` when a
 customer pays the store.
 
-## Vendor Payouts (gas register only)
+## Vendor Payouts (Verifone only)
 
 Vendor payouts work like tickets. Users must be able to enter multiple optional
 amounts with optional descriptions. The total will be used at the end of the day
 or shift.
 
-## Card Sales (gas register only)
+## Card Sales (Verifone only)
 
-The owner will enter the gas register's total cash sales. The register has a
+The owner will enter Verifone's total cash sales. Verifone has a
 separate card machine that is not connected to the POS, so it operates
 independently. These card-machine sales are recorded as cash sales for the POS.
 
-At the end of the day or shift, the owner will enter the gas register's total card
+At the end of the day or shift, the owner will enter Verifone's total card
 sales. The frontend must accept the net amount without fees, and the backend must
 use it at the end of the day or shift.
 
-## Safe Drops (gas register only)
+## Safe Drops (Verifone only)
 
 This is the total cash amount dropped into the locked safe, similar to an
 in-store locker. Users must be able to enter multiple optional amounts.
@@ -85,8 +85,8 @@ in-store locker. Users must be able to enter multiple optional amounts.
 
 This is the total amount of gas sold through the Bodega AI register. That POS does
 not have access to the pumps, so the money is collected in this register while the
-gas is sold through the gas register. This is a simulated sale for the gas
-register, and the backend will use it at the end of the day or shift.
+gas is sold through Verifone. This is a simulated sale for Verifone, and the
+backend will use it at the end of the day or shift.
 
 ## Net Difference (Bodega AI register only)
 
@@ -120,7 +120,7 @@ All of these items must be organized into steps:
 - Phone cards
 - Gas
 
-### Gas register
+### Verifone
 
 - Total cash sales
 - Safe drops
@@ -158,7 +158,7 @@ For phone cards, the backend will check the difference described above. It will
 also check the differences for lottery sales and payouts. For Bodega AI, it will
 display the net difference amount.
 
-For the gas register, it will calculate:
+For Verifone, it will calculate:
 
 ```text
 Total cash sales
@@ -169,14 +169,14 @@ Total cash sales
 - card payment without including fee
 ```
 
-This provides the gas register's net difference, which can be positive or
+This provides Verifone's net difference, which can be positive or
 negative.
 
 The backend should provide these values in a table:
 
 ```text
 Bodega AI [Net Difference: ]
-Gas Register [Net Difference: ]
+Verifone [Net Difference: ]
 
 Phone card [Expected: , Actual: ]
 Lottery sales [Expected: , Actual: ]
