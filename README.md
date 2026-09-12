@@ -98,6 +98,8 @@ The form has five steps: close details, independent totals, scratch-off counters
 Bodega AI figures, and Verifone figures. Monetary fields are required;
 explicit zero is accepted. Bodega's net difference may be negative. Tickets,
 vendor payouts, and safe drops are optional lists with amounts and descriptions.
+Signed fields use a separate `+`/`−` selector so they work with mobile numeric
+keypads that do not provide a minus key.
 
 A **shift close** covers the current shift. Scratch-off counters follow earlier
 shifts on the same business date in the order those reports were created.

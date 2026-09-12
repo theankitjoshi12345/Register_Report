@@ -13,18 +13,31 @@ export function FieldError({ name, errors }: { name: string; errors: FieldErrors
 export function Amount({ name, label, value, signed, explicitSign, onChange, errors }: {
   name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; onChange: (value: string) => void; errors: FieldErrors
 }) {
+  const sign = value.trim().startsWith('-') ? '-' : '+'
+  const magnitude = signed ? value.trim().replace(/^[+-]/, '') : value
+  const updateSignedValue = (nextSign: string, nextMagnitude: string) => {
+    if (!nextMagnitude) {
+      onChange(nextSign === '-' ? '-' : explicitSign ? '+' : '')
+    } else {
+      onChange(nextSign === '-' ? `-${nextMagnitude}` : explicitSign ? `+${nextMagnitude}` : nextMagnitude)
+    }
+  }
   return (
     <div>
       <label htmlFor={name} className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
-      <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">$</span>
-        <input id={name} name={name} required type={explicitSign ? 'text' : 'number'} inputMode="decimal"
-          step={explicitSign ? undefined : '0.01'} min={signed ? undefined : 0}
-          pattern={explicitSign ? '[+-]?(?:\\d+(?:\\.\\d{0,2})?|\\.\\d{1,2})' : undefined}
-          placeholder={explicitSign ? '+25.00 or -25.00' : undefined}
-          value={value} onChange={(event) => onChange(event.target.value)}
-          aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined}
-          className={`${inputClass} pl-7`} />
+      <div className="flex gap-2">
+        {signed && <select aria-label={`${label} sign`} value={sign} onChange={(event) => updateSignedValue(event.target.value, magnitude)}
+          className="min-h-12 w-[4.5rem] shrink-0 rounded-xl border border-slate-300 bg-white px-3 py-3 text-base font-semibold outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-100 sm:text-sm">
+          <option value="+">+</option><option value="-">−</option>
+        </select>}
+        <div className="relative min-w-0 flex-1">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">$</span>
+          <input id={name} name={name} required type="number" inputMode="decimal" step="0.01" min="0"
+            placeholder={signed ? '25.00' : undefined}
+            value={magnitude} onChange={(event) => signed ? updateSignedValue(sign, event.target.value) : onChange(event.target.value)}
+            aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined}
+            className={`${inputClass} pl-7`} />
+        </div>
       </div>
       <FieldError name={name} errors={errors} />
     </div>
@@ -42,7 +55,7 @@ export function Items({ name, title, values, onChange, errors }: {
           className={`${buttonClass} px-3 py-2 text-xs text-teal-800`}><Plus size={14} /> Add amount</button>
       </div>
       <FieldError name={name} errors={errors} />
-      {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Use <strong>+</strong> when the customer was charged and <strong>−</strong> when the customer paid the store.</p>}
+      {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Choose <strong>+</strong> when the customer was charged and <strong>−</strong> when the customer paid the store.</p>}
       {values.length === 0 ? <p className="text-sm text-slate-500">Nothing added.</p> : values.map((item, index) => (
         <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]" key={`${name}-${index}`}>
           <Amount name={`${name}.${index}.amount`} label={`${title} amount ${index + 1}`} value={item.amount}
