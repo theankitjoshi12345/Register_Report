@@ -134,7 +134,7 @@ Gas total cash sales
 − Safe drops
 − Tickets
 − Vendor payouts
-− Gas debit/credit-card payments, net of fees
+− Card payment without including fee
 ```
 
 **Phone cards and debit/credit payments are separate entries.** The old

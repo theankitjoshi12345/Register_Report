@@ -24,7 +24,7 @@ export const gasFields = [
   ['gas_lottery_sales', 'Gas lottery sales'],
   ['gas_lottery_payout', 'Gas lottery payout'],
   ['gas_phone_card_sales', 'Gas phone card sales'],
-  ['gas_card_payment_sales', 'Card payments, net of fees'],
+  ['gas_card_payment_sales', 'Card payment without including fee'],
 ] as const
 export const fields = [...independentFields, ...bodegaFields, ...gasFields]
 export type AmountKey = typeof fields[number][0]

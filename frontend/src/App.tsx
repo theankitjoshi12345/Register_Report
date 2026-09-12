@@ -225,7 +225,7 @@ function App() {
                     {step === 1 && amountGroup(independentFields)}
                     {step === 2 && <ScratchFields form={form} catalog={catalog} errors={errors} onChange={(value) => update('scratch_offs', value)} />}
                     {step === 3 && amountGroup(bodegaFields)}
-                    {step === 4 && <div className="space-y-6">{amountGroup(gasFields)}<p className="text-sm leading-6 text-slate-600">Phone card sales are prepaid phone cards sold at this register. Card payments are debit and credit payments from the separate card machine, after fees.</p>{itemGroups.map(({ key, title }) => <Items key={key} name={key} title={title} values={form[key]} onChange={(value) => update(key, value)} errors={errors} />)}</div>}
+                    {step === 4 && <div className="space-y-6">{amountGroup(gasFields)}<p className="text-sm leading-6 text-slate-600">Phone card sales are prepaid phone cards sold at this register. Card payment without including fee is the debit and credit payment total from the separate card machine.</p>{itemGroups.map(({ key, title }) => <Items key={key} name={key} title={title} values={form[key]} onChange={(value) => update(key, value)} errors={errors} />)}</div>}
                   </fieldset>
                   <div className="flex justify-between border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:px-8">
                     <button type="button" disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className={`${buttonClass} border-transparent disabled:invisible`}><ArrowLeft size={16} /> Back</button>

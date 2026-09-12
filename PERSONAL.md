@@ -128,7 +128,7 @@ All of these items must be organized into steps:
 - Lottery sales
 - Lottery payout
 - Vendor payouts
-- Card-machine sales without fees
+- Card payment without including fee
 
 ## Clarifications (2026-09-10)
 
@@ -166,7 +166,7 @@ Total cash sales
 - safe drops
 - tickets
 - vendor payouts
-- card-machine sales without fees
+- card payment without including fee
 ```
 
 This provides the gas register's net difference, which can be positive or
