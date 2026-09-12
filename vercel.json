@@ -8,6 +8,16 @@
       "includeFiles": "{backend/config/**,backend/stores/**,backend/reports/**}"
     }
   },
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }]
+    }
+  ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index" },
     { "handle": "filesystem" },
