@@ -1,7 +1,9 @@
 # Register Report Requirements
 
-The application must support both day closes and shift closes, depending on what
-the user wants to perform. There must always be a day close.
+The application is organized around shift closes. Users enter only the activity
+for each shift, and the application automatically builds the day-end summary
+from every shift on that business date. Previously saved manual day closes stay
+available as legacy history, but users do not create new ones.
 
 ## Lottery
 
@@ -22,19 +24,28 @@ When a slot has no prior ending number, its starting counter defaults to `000`.
 The first close uses `ending number - 000`; for example, ending number `006` on a
 $3 ticket produces `(6 - 0) × $3 = $18`.
 
-The lottery terminal provides two values for the user to enter: actual instant-
-ticket sales and actual payouts. Verifone and the Bodega AI register each
-provide lottery sales and lottery payout values.
+The lottery terminal provides cumulative sales and payout readings that cannot
+be reset between shifts. At each shift close, the user enters exactly what the
+terminal currently displays. The user must not subtract an earlier reading.
+Verifone and the Bodega AI register each provide the lottery sales and payout
+that belong to the current shift.
 
-The backend will add the sales and payout values from both registers and compare
-them with the actual lottery-terminal values:
+For the first shift, the shift terminal amount equals the cumulative reading.
+For every later shift on the same business date, the backend subtracts the
+amounts already assigned to earlier shifts. This is equivalent to subtracting
+the immediately previous cumulative reading:
 
 ```text
-Actual scratch-off sales + actual lottery sales
-    == combined lottery sales across both POS registers
+Current shift terminal sales
+    = current cumulative terminal sales - previous cumulative terminal sales
 
-Actual payout sales == combined POS payout sales
+Current shift terminal payout
+    = current cumulative terminal payout - previous cumulative terminal payout
 ```
+
+The derived shift amounts are compared with Bodega plus Verifone lottery sales
+and payouts for that shift. Scratch-off sales are calculated and reported
+separately.
 
 Users must be able to enter the number of new scratch-off rolls added before the
 day ends. When an ending number is lower than the previous night's ending number,
@@ -43,29 +54,29 @@ by the user must take precedence.
 
 ## Phone Cards
 
-One phone-card machine provides the actual phone-card sales for the day. The
-backend must compare that amount with the combined phone-card sales entered from
-both POS registers.
+One phone-card machine provides actual phone-card sales for each shift. The
+backend compares that amount with the shift's combined phone-card sales from
+both POS registers. The automated day summary adds every shift's values.
 
 ## Tickets (Verifone only)
 
 This store allows known regular customers to receive a ticket and pay the store
-the next day. At the end of the day or shift, the owner will enter the total value
-of tickets created that day on Verifone. This feature does not apply to
+the next day. At each shift close, the owner enters the ticket activity for that
+shift on Verifone. This feature does not apply to
 the Bodega AI register.
 
 Users must be able to enter multiple optional amounts. Each amount may have an
-optional description containing any relevant information. The total will be used
-at the end of the day or shift. Ticket amounts may be positive or negative. The
-frontend must provide a `+`/`-` selector: `+` when a ticket is created for the
-customer and `-` when the customer pays the ticket. The amount input accepts the
-unsigned value.
+optional description containing any relevant information. The total is used for
+the shift and automatic day summary. Ticket amounts may be positive or negative.
+The frontend must provide a `+`/`-` selector: `+` when a ticket is created for
+the customer and `-` when the customer pays the ticket. The amount input accepts
+the unsigned value.
 
 ## Vendor Payouts (Verifone only)
 
 Vendor payouts work like tickets. Users must be able to enter multiple optional
-amounts with optional descriptions. The total will be used at the end of the day
-or shift.
+amounts with optional descriptions. The total is used for the shift and automatic
+day summary.
 
 ## Card Sales (Verifone only)
 
@@ -73,9 +84,9 @@ The owner will enter Verifone's total cash sales. Verifone has a
 separate card machine that is not connected to the POS, so it operates
 independently. These card-machine sales are recorded as cash sales for the POS.
 
-At the end of the day or shift, the owner will enter Verifone's total card
-sales. The frontend must accept the net amount without fees, and the backend must
-use it at the end of the day or shift.
+At each shift close, the owner enters Verifone's card sales for that shift. The
+frontend must accept the amount without fees, and the backend uses it for the
+shift and automatic day summary.
 
 ## Safe Drops (Verifone only)
 
@@ -87,14 +98,14 @@ in-store locker. Users must be able to enter multiple optional amounts.
 This is the total amount of gas sold through the Bodega AI register. That POS does
 not have access to the pumps, so the money is collected in this register while the
 gas is sold through Verifone. This is a simulated sale for Verifone, and the
-backend will use it at the end of the day or shift.
+backend uses it for the shift and automatic day summary.
 
 ## Net Difference (Bodega AI register only)
 
-At the end of the day, this is the difference shown by the Bodega AI register. It
-can be positive or negative, so users must be able to enter either value.
+At the end of each shift, this is the difference shown by the Bodega AI register.
+It can be positive or negative, so users must be able to enter either value.
 
-## What the owner enters for every day or shift close
+## What the owner enters for every shift close
 
 All of these items must be organized into steps:
 
@@ -104,8 +115,8 @@ All of these items must be organized into steps:
 
 ### Lottery terminal
 
-- Lottery sales
-- Lottery payout
+- Current cumulative lottery sales
+- Current cumulative lottery payout
 
 ### Scratch-off tickets
 
@@ -131,19 +142,19 @@ All of these items must be organized into steps:
 - Vendor payouts
 - Card payment without including fee
 
-## Clarifications (2026-09-10)
+## Clarifications
 
-- Authentication and authorization are intentionally deferred until the rest of
-  the product is complete.
+- Django session authentication, CSRF protection, and store-scoped authorization
+  are required.
 - Scratch-off counters accept either a valid whole-number ticket counter or an
   empty/null value. An empty ending counter means that all tickets remaining in
   that roll were sold.
 - A missing prior counter defaults to `000` for the first sales calculation.
 - When an ending counter is lower than the previous ending counter and the user
   entered zero new rolls, the application automatically records one new roll.
-- Scratch-off sales use the ticket price and the clarified roll formula:
-  `(ending - starting) + (new roll counter - 1) * (ticket ending - starting + 1)
-  + (ending - last night number + 1)`, then multiplied by the ticket price.
+- Scratch-off sales use the prior shift's ending state, the current ending
+  counter, new-roll count, and the catalog ticket price. The final shift state
+  becomes the starting state for the next business date.
 - The new-roll value is a counter for each scratch-off slot, not only a checkbox.
 - Every amount that may be positive or negative uses a separate `+`/`-` selector,
   including ticket amounts and the Bodega AI net difference. For tickets, `+`
@@ -157,8 +168,9 @@ All of these items must be organized into steps:
 ## How the backend will function
 
 For phone cards, the backend will check the difference described above. It will
-also check the differences for lottery sales and payouts. For Bodega AI, it will
-display the net difference amount.
+also derive the current shift's terminal sales and payout before comparing them
+with the shift register values. For Bodega AI, it will display the net difference
+amount.
 
 For Verifone, it will calculate:
 
@@ -190,6 +202,14 @@ scratch-off slot, it must show the starting number from the previous close, the
 ending number entered for the current close, the number of new rolls added, and
 the total sales value generated by that slot.
 
+The application automatically produces one live daily summary for every
+business date that has shifts. It includes all shifts, summed scratch-off sales
+and new rolls, final scratch-off state, combined register values and line items,
+the final cumulative terminal readings, and day-end sales, payout, and phone-card
+comparisons. Editing an earlier shift recalculates every later shift and the
+daily summary atomically.
+
 ## UI
 
-Users should be able to access reports and shifts from any day.
+Users should be able to access individual shifts and automatic daily summaries
+from any day.

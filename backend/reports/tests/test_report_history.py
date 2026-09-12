@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
 from django.test import TestCase, SimpleTestCase
 from django.utils import timezone
 
@@ -13,7 +12,7 @@ from reports.models import DailyReport
 from stores.models import Store, StoreMembership
 
 
-def report_payload(report_date="2026-09-10", close_type="day", **overrides):
+def report_payload(report_date="2026-09-10", close_type="shift", **overrides):
     return {
         "report_date": report_date, "close_type": close_type, "close_label": "",
         **dict.fromkeys(MONEY_FIELDS, "0.00"),
@@ -105,7 +104,7 @@ class ReportHistoryTests(TestCase):
         StoreMembership.objects.create(store=self.store, user=self.user)
         self.client.force_login(self.user)
 
-    def create(self, report_date="2026-09-10", close_type="day", readings=None, **overrides):
+    def create(self, report_date="2026-09-10", close_type="shift", readings=None, **overrides):
         payload = report_payload(report_date, close_type, **overrides)
         if readings is not None:
             payload["scratch_offs"] = readings
@@ -124,21 +123,15 @@ class ReportHistoryTests(TestCase):
     def sales(self, report):
         return self.fetch(report)["calculated"]["scratch_off"]["sales"]
 
-    def test_shifts_chain_but_day_close_uses_previous_date(self):
+    def test_shifts_chain_within_and_across_business_dates(self):
         self.create("2026-09-09", readings=[reading(10)])
-        first = self.create(close_type="shift", readings=[reading(12)])
-        second = self.create(close_type="shift", readings=[reading(15)])
-        day = self.create(readings=[reading(16)])
-        tomorrow = self.create("2026-09-11", close_type="shift", readings=[reading(18)])
-        self.assertEqual([self.sales(report) for report in (first, second, day, tomorrow)], ["40.00", "60.00", "120.00", "40.00"])
-
-    def test_day_created_before_shifts_still_provides_following_date_baseline(self):
-        self.create("2026-09-09", readings=[reading(10)])
-        day = self.create(readings=[reading(16)])
-        self.create(close_type="shift", readings=[reading(12)])
+        first = self.create(readings=[reading(12)])
+        second = self.create(readings=[reading(15)])
         tomorrow = self.create("2026-09-11", readings=[reading(18)])
-        self.assertEqual(self.sales(day), "120.00")
-        self.assertEqual(self.sales(tomorrow), "40.00")
+        self.assertEqual(
+            [self.sales(report) for report in (first, second, tomorrow)],
+            ["40.00", "60.00", "60.00"],
+        )
 
     def test_tied_shift_creation_times_use_id_order(self):
         self.create("2026-09-09", readings=[reading(10)])
@@ -176,49 +169,124 @@ class ReportHistoryTests(TestCase):
         first_counter = self.create(readings=[reading(2)])
         self.assertEqual(self.sales(first_counter), "40.00")
 
-    def test_first_day_exhausted_shift_can_be_closed_for_the_whole_day(self):
-        self.create(close_type="shift", readings=[reading(20)])
-        self.create(close_type="shift", readings=[reading(None)])
-        day = self.create(readings=[reading(None)])
-        self.assertEqual(self.sales(day), "480.00")
+    def test_daily_summary_sums_scratch_sales_and_carries_final_state(self):
+        first = self.create(readings=[reading(20)])
+        second = self.create(readings=[reading(None)])
+        history = self.client.get("/api/reports/").json()
+        summary = history["daily_summaries"][0]
+        self.assertEqual(self.sales(first), "400.00")
+        self.assertEqual(self.sales(second), "80.00")
+        self.assertEqual(summary["scratch_off"]["sales"], "480.00")
+        self.assertTrue(summary["scratch_off"]["final_state"]["1"]["ending_exhausted"])
         tomorrow = self.create("2026-09-11", readings=[reading(None)])
         self.assertEqual(self.sales(tomorrow), "0.00")
 
-    def test_first_day_shift_sales_equal_day_sales_when_roll_is_exhausted(self):
-        first = self.create(close_type="shift", readings=[reading(20)])
-        second = self.create(close_type="shift", readings=[reading(None)])
-        day = self.create(readings=[reading(None)])
-        self.assertEqual(self.sales(first), "400.00")
-        self.assertEqual(self.sales(second), "80.00")
-        self.assertEqual(Decimal(self.sales(first)) + Decimal(self.sales(second)), Decimal(self.sales(day)))
-
-    def test_first_day_shift_sales_equal_day_sales_with_replacement_rolls(self):
-        first = self.create(close_type="shift", readings=[reading(20)])
-        second = self.create(close_type="shift", readings=[reading(2, 2)])
-        day = self.create(readings=[reading(2, 2)])
-        self.assertEqual(Decimal(self.sales(first)) + Decimal(self.sales(second)), Decimal(self.sales(day)))
-        self.assertEqual(self.sales(day), "1040.00")
-
-    def test_every_catalog_slots_shift_sales_match_full_day_sales(self):
+    def test_daily_summary_sums_every_catalog_slot_and_new_roll(self):
         self.create("2026-09-09", readings=[reading(5, slot=slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
-        first = self.create(close_type="shift", readings=[reading(10, slot=slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
-        second = self.create(close_type="shift", readings=[reading(2, 1, slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
-        day = self.create(readings=[reading(2, 1, slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
-        for slot in SCRATCH_OFF_SLOTS:
-            with self.subTest(slot=slot.slot_number):
-                first_sales = Decimal(first["calculated"]["scratch_off"]["slots"][str(slot.slot_number)]["sales"])
-                second_sales = Decimal(second["calculated"]["scratch_off"]["slots"][str(slot.slot_number)]["sales"])
-                day_sales = Decimal(day["calculated"]["scratch_off"]["slots"][str(slot.slot_number)]["sales"])
-                self.assertEqual(first_sales + second_sales, day_sales)
+        first = self.create(readings=[reading(10, slot=slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
+        second = self.create(readings=[reading(2, 1, slot.slot_number) for slot in SCRATCH_OFF_SLOTS])
+        summary = self.client.get("/api/reports/").json()["daily_summaries"][0]
+        expected = Decimal(first["calculated"]["scratch_off"]["sales"]) + Decimal(
+            second["calculated"]["scratch_off"]["sales"],
+        )
+        self.assertEqual(Decimal(summary["scratch_off"]["sales"]), expected)
+        self.assertEqual(summary["scratch_off"]["total_new_rolls"], 20)
+        self.assertEqual(summary["scratch_off"]["new_rolls_by_slot"], {
+            str(slot.slot_number): 1 for slot in SCRATCH_OFF_SLOTS
+        })
 
-    def test_day_new_roll_count_is_cumulative_across_shifts(self):
-        self.create("2026-09-09", readings=[reading(20)])
-        self.create(close_type="shift", readings=[reading(2, 1)])
-        self.create(close_type="shift", readings=[reading(1, 1)])
-        invalid = self.client.post("/api/reports/", report_payload(scratch_offs=[reading(3, 1)]), content_type="application/json")
-        self.assertEqual(invalid.status_code, 400)
-        day = self.create(readings=[reading(1, 2)])
-        self.assertEqual(self.sales(day), "620.00")
+    def test_cumulative_terminal_readings_are_derived_per_shift_and_summarized(self):
+        first = self.create(
+            lottery_terminal_sales="500", lottery_terminal_payout="100",
+            bodega_lottery_sales="300", gas_lottery_sales="200",
+            bodega_lottery_payout="60", gas_lottery_payout="40",
+            phone_card_actual_sales="10", bodega_phone_card_sales="4", gas_phone_card_sales="6",
+            tickets=[{"amount": "5", "description": "First ticket"}],
+        )
+        second = self.create(
+            lottery_terminal_sales="1200", lottery_terminal_payout="250",
+            bodega_lottery_sales="400", gas_lottery_sales="300",
+            bodega_lottery_payout="90", gas_lottery_payout="60",
+            phone_card_actual_sales="20", bodega_phone_card_sales="8", gas_phone_card_sales="12",
+            safe_drops=[{"amount": "25"}], vendor_payouts=[{"amount": "7"}],
+        )
+        third = self.create(
+            lottery_terminal_sales="1600", lottery_terminal_payout="320",
+            bodega_lottery_sales="250", gas_lottery_sales="150",
+            bodega_lottery_payout="40", gas_lottery_payout="30",
+        )
+        self.assertEqual(first["calculated"]["terminal"]["shift_sales"], "500.00")
+        self.assertTrue(DailyReport.objects.get(pk=first["id"]).terminal_values_cumulative)
+        self.assertEqual(second["calculated"]["terminal"]["previous_cumulative_sales"], "500.00")
+        self.assertEqual(second["calculated"]["terminal"]["shift_sales"], "700.00")
+        self.assertEqual(second["calculated"]["terminal"]["shift_payout"], "150.00")
+        self.assertEqual(second["calculated"]["comparisons"]["lottery_sales"]["status"], "match")
+        self.assertEqual(third["calculated"]["terminal"]["shift_sales"], "400.00")
+        self.assertEqual(third["calculated"]["terminal"]["shift_payout"], "70.00")
+        summary = self.client.get("/api/reports/").json()["daily_summaries"][0]
+        self.assertEqual(summary["shift_count"], 3)
+        self.assertEqual(summary["terminal"]["final_cumulative_sales"], "1600.00")
+        self.assertEqual(summary["registers"]["lottery_sales"], "1600.00")
+        self.assertEqual(summary["comparisons"]["lottery_sales"]["status"], "match")
+        self.assertEqual(summary["comparisons"]["lottery_payout"]["status"], "match")
+        self.assertEqual(summary["comparisons"]["phone_card_sales"]["status"], "match")
+        self.assertEqual(summary["line_items"]["tickets"]["total"], "5.00")
+        self.assertEqual(summary["line_items"]["safe_drops"]["total"], "25.00")
+        self.assertEqual(summary["line_items"]["vendor_payouts"]["total"], "7.00")
+
+    def test_legacy_per_shift_terminal_values_are_translated_without_rewriting_them(self):
+        first = self.create(lottery_terminal_sales="500", lottery_terminal_payout="100")
+        second = self.create(lottery_terminal_sales="1200", lottery_terminal_payout="250")
+        DailyReport.objects.filter(pk=first["id"]).update(terminal_values_cumulative=False)
+        DailyReport.objects.filter(pk=second["id"]).update(
+            terminal_values_cumulative=False,
+            lottery_terminal_sales="700",
+            lottery_terminal_payout="150",
+        )
+        from reports.views import recalculate_store_history
+        recalculate_store_history(self.store)
+        translated = self.fetch(second)["calculated"]["terminal"]
+        self.assertEqual(translated["cumulative_sales"], "1200.00")
+        self.assertEqual(translated["shift_sales"], "700.00")
+        stored = DailyReport.objects.get(pk=second["id"])
+        self.assertEqual(stored.lottery_terminal_sales, Decimal("700.00"))
+        self.assertFalse(stored.terminal_values_cumulative)
+
+    def test_editing_earlier_cumulative_reading_recalculates_later_shift(self):
+        first = self.create(lottery_terminal_sales="500", lottery_terminal_payout="100")
+        second = self.create(lottery_terminal_sales="1200", lottery_terminal_payout="250")
+        response = self.patch(first, {"lottery_terminal_sales": "550", "lottery_terminal_payout": "125"})
+        self.assertEqual(response.status_code, 200, response.content)
+        later = self.fetch(second)["calculated"]["terminal"]
+        self.assertEqual(later["shift_sales"], "650.00")
+        self.assertEqual(later["shift_payout"], "125.00")
+
+    def test_invalid_earlier_terminal_edit_rolls_back_the_whole_history(self):
+        first = self.create(lottery_terminal_sales="500", lottery_terminal_payout="100")
+        second = self.create(lottery_terminal_sales="600", lottery_terminal_payout="150")
+        response = self.patch(first, {"lottery_terminal_sales": "700"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("history", response.json()["errors"])
+        self.assertEqual(self.fetch(first)["calculated"]["terminal"]["cumulative_sales"], "500.00")
+        self.assertEqual(self.fetch(second)["calculated"]["terminal"]["shift_sales"], "100.00")
+
+    def test_terminal_cumulative_readings_restart_on_each_business_date(self):
+        self.create(lottery_terminal_sales="1600", lottery_terminal_payout="320")
+        next_day = self.create(
+            "2026-09-11", lottery_terminal_sales="200", lottery_terminal_payout="40",
+        )
+        self.assertEqual(next_day["calculated"]["terminal"]["shift_sales"], "200.00")
+        self.assertEqual(next_day["calculated"]["terminal"]["shift_payout"], "40.00")
+
+    def test_cumulative_terminal_reading_cannot_decrease(self):
+        self.create(lottery_terminal_sales="500", lottery_terminal_payout="100")
+        response = self.client.post(
+            "/api/reports/",
+            report_payload(lottery_terminal_sales="499.99", lottery_terminal_payout="99.99"),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("lottery_terminal_sales", response.json()["errors"])
 
     def test_backdated_create_recalculates_later_reports(self):
         self.create("2026-09-08", readings=[reading(5)])
@@ -273,12 +341,16 @@ class ReportHistoryTests(TestCase):
         self.assertIsNone(self.fetch(later)["calculated"]["registers"]["gas_net_difference"])
         self.assertIsNone(self.fetch(later)["calculated"]["inputs"]["gas_card_payment_sales"])
 
-    def test_database_prevents_duplicate_day_closes(self):
-        day = self.create()
-        report = DailyReport.objects.get(pk=day["id"])
-        report.pk = None
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            report.save()
+    def test_new_manual_day_closes_and_close_type_changes_are_rejected(self):
+        response = self.client.post(
+            "/api/reports/", report_payload(close_type="day"), content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("automatically", str(response.json()["errors"]["close_type"]))
+        shift = self.create()
+        changed = self.patch(shift, {"close_type": "day"})
+        self.assertEqual(changed.status_code, 400)
+        self.assertEqual(DailyReport.objects.get(pk=shift["id"]).close_type, "shift")
 
     def test_invalid_json_and_payload_shapes_return_400(self):
         for body in ("{", "[]", "null", "42", '"text"', '{"gas_cash_sales": NaN}', b"\xff", "[" * 1100 + "0" + "]" * 1100):

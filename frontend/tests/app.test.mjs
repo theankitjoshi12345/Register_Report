@@ -43,11 +43,31 @@ function reportFromForm(form, id = 1) {
           starting_number: 3, ending_number: row.ending_number === '' ? null : Number(row.ending_number), ending_exhausted: row.ending_number === '',
         }])),
       }, comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
+      terminal: {
+        cumulative_sales: form.lottery_terminal_sales, cumulative_payout: form.lottery_terminal_payout,
+        previous_cumulative_sales: '0.00', previous_cumulative_payout: '0.00',
+        shift_sales: form.lottery_terminal_sales, shift_payout: form.lottery_terminal_payout,
+      },
       registers: { bodega_net_difference: form.bodega_net_difference, gas_net_difference: '20.00' },
       normalized_line_items: [['tickets', 'ticket'], ['vendor_payouts', 'vendor_payout'], ['safe_drops', 'safe_drop']].flatMap(([key, item_type]) => form[key].map((item) => ({ ...item, item_type }))),
       normalized_scratch_offs: form.scratch_offs.map((row) => ({ ...row, ending_number: row.ending_number === '' ? null : Number(row.ending_number), new_roll_count: Number(row.new_roll_count) })),
     },
   }
+}
+function summaryFromReports(reports) {
+  const shifts = reports.filter((report) => report.close_type === 'shift')
+  if (!shifts.length) return []
+  const latest = shifts.at(-1)
+  return [{
+    report_date: latest.report_date, shift_count: shifts.length,
+    shifts: shifts.map((report) => ({ id: report.id, close_label: report.close_label, created_at: report.created_at, terminal_sales: report.calculated.terminal.shift_sales, terminal_payout: report.calculated.terminal.shift_payout, scratch_off_sales: report.calculated.scratch_off.sales })),
+    terminal: { final_cumulative_sales: latest.calculated.terminal.cumulative_sales, final_cumulative_payout: latest.calculated.terminal.cumulative_payout },
+    scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {} },
+    inputs: Object.fromEntries(fields.map(([key]) => [key, latest.calculated.inputs[key]])),
+    line_items: Object.fromEntries(['tickets', 'vendor_payouts', 'safe_drops'].map((key) => [key, { total: '0.00', entries: [] }])),
+    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', gas_net_difference: '20.00' },
+    comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
+  }]
 }
 const completeForm = (overrides = {}) => ({ ...initialForm(), ...Object.fromEntries(fields.map(([key]) => [key, '0.00'])), report_date: '2026-09-10', ...overrides })
 let root, container, requests, history, auth, override
@@ -63,7 +83,7 @@ beforeEach(() => {
     if (url === '/api/auth/login/') { auth = structuredClone(signedIn); return json(auth) }
     if (url === '/api/auth/logout/') { auth = structuredClone(signedOut); return json(auth) }
     if (url === '/api/lottery/catalog/') return json({ slots })
-    if (url === '/api/reports/' && call.method === 'GET') return json({ reports: history })
+    if (url === '/api/reports/' && call.method === 'GET') return json({ reports: history, daily_summaries: summaryFromReports(history) })
     if (call.method === 'POST' || call.method === 'PATCH') {
       const id = call.method === 'PATCH' ? Number(url.split('/')[3]) : 1
       const saved = reportFromForm(call.body, id)
@@ -111,11 +131,11 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await render()
   await enter('report_date', '2026-09-10'); await enter('close_label', 'Evening review')
   await click('Continue')
-  assert.match(currentStep(), /Independent totals/)
-  await click('Continue'); assert.match(currentStep(), /Independent totals/)
+  assert.match(currentStep(), /Machine totals/)
+  await click('Continue'); assert.match(currentStep(), /Machine totals/)
   await fillVisible()
-  await enter('phone_card_actual_sales', '-1'); await click('Continue'); assert.match(currentStep(), /Independent totals/)
-  await enter('phone_card_actual_sales', '1.001'); await click('Continue'); assert.match(currentStep(), /Independent totals/)
+  await enter('phone_card_actual_sales', '-1'); await click('Continue'); assert.match(currentStep(), /Machine totals/)
+  await enter('phone_card_actual_sales', '1.001'); await click('Continue'); assert.match(currentStep(), /Machine totals/)
   await enter('phone_card_actual_sales', '17.25'); await click('Continue')
   assert.match(currentStep(), /Scratch-off count/)
   await enter('scratch_offs.0.ending_number', '25'); await click('Continue'); assert.match(currentStep(), /Scratch-off count/)
@@ -131,7 +151,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
     await click(`Add ${title} amount`); await enter(`${key}.0.amount`, amount); await enter(`${key}.0.description`, description)
   }
   await click('Save report')
-  assert.match(container.textContent, /Report for 2026-09-10/)
+  assert.match(container.textContent, /Shift report for 2026-09-10/)
   for (const label of ['Verifone total cash sales', 'Verifone lottery sales', 'Verifone lottery payout', 'Verifone phone card sales']) {
     assert.match(container.textContent, new RegExp(label))
   }
@@ -153,7 +173,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   override = (call) => { if (call.method === 'PATCH') later.calculated.registers.gas_net_difference = '777.00' }
   await click('Save changes')
   assert.equal(requests.filter((call) => call.url === '/api/reports/' && call.method === 'GET').length, 3)
-  await click('2026-09-11day Later close'); assert.match(container.textContent, /\$777.00/)
+  await click('2026-09-11Shift Later close'); assert.match(container.textContent, /\$777.00/)
 })
 
 test('sign selectors support negative amounts without a minus key', async () => {
@@ -170,7 +190,7 @@ test('sign selectors support negative amounts without a minus key', async () => 
 test('Enter on an earlier step advances without creating a report', async () => {
   await render()
   await act(async () => container.querySelector('form').requestSubmit())
-  assert.match(currentStep(), /Independent totals/)
+  assert.match(currentStep(), /Machine totals/)
   assert.equal(requests.filter((call) => call.method === 'POST').length, 0)
 })
 
@@ -313,7 +333,7 @@ test('a CSRF rejection preserves the unsaved report', async () => {
 test('ordinary missing reports do not revoke store access or discard the draft', async () => {
   const saved = reportFromForm(completeForm({ close_label: 'Unsaved private draft' }))
   history = [saved]
-  await render(); await click('2026-09-10day Unsaved private draft'); await click('Edit'); await goToGas()
+  await render(); await click('2026-09-10Shift Unsaved private draft'); await click('Edit'); await goToGas()
   override = (call) => call.method === 'PATCH' ? json({ errors: 'Report not found.' }, 404) : null
   await click('Save changes')
   assert.match(container.querySelector('[role=alert]').textContent, /Report not found/)
@@ -321,15 +341,15 @@ test('ordinary missing reports do not revoke store access or discard the draft',
   assert.equal(requests.filter((call) => call.url === '/api/auth/session/').length, 1)
 })
 
-test('pending shift dates start a day close and legacy card payments remain visibly missing', async () => {
+test('daily summaries are automatic and shift history still shows legacy missing payments', async () => {
   const legacy = reportFromForm(completeForm({ close_type: 'shift', close_label: 'Morning', gas_phone_card_sales: '12.00', gas_card_payment_sales: null }))
   legacy.calculated.registers.gas_net_difference = null
   history = [legacy]
   await render()
-  assert.match(container.textContent, /Day close still needed/)
-  await click('Close 2026-09-10'); assert.equal(input('report_date').value, '2026-09-10')
-  assert.equal(button('Day closeComplete end-of-day reconciliation.').getAttribute('aria-pressed'), 'true')
-  await click('2026-09-10shift Morning')
+  await click('2026-09-10Daily summary · 1 shift')
+  assert.match(container.textContent, /Automatic day end/)
+  assert.match(container.textContent, /Calculated from 1 shift/)
+  await click('MorningTerminal sales $0.00 · Scratch-offs $15.00')
   assert.match(container.textContent, /older report needs its card payment amount/)
   assert.match(container.textContent, /Needs entry/)
   await click('Edit'); await goToGas()
@@ -345,7 +365,7 @@ test('sparse saved scratch readings remain omitted on edit and errors map to the
   const saved = reportFromForm(completeForm())
   saved.calculated.normalized_scratch_offs = [{ slot_number: 3, ending_number: 10, new_roll_count: 0 }]
   history = [saved]
-  await render(); await click('2026-09-10day'); await click('Edit'); await goToGas(); await fillVisible()
+  await render(); await click('2026-09-10Shift'); await click('Edit'); await goToGas(); await fillVisible()
   override = (call) => call.method === 'PATCH' ? json({ errors: { 'scratch_offs.0.ending_number': ['Check slot 3 reading.'] } }, 400) : null
   await click('Save changes')
   const patch = requests.find((call) => call.method === 'PATCH')
@@ -386,7 +406,7 @@ test('saved reports remain visible when history refresh fails and refresh can re
     return null
   }
   await click('Save report')
-  assert.match(container.textContent, /Your report was saved/); assert.match(container.textContent, /Report for/)
+  assert.match(container.textContent, /Your report was saved/); assert.match(container.textContent, /Shift report for/)
   override = null; await click('Refresh history')
   assert.doesNotMatch(container.textContent, /History could not be refreshed/)
   assert.equal(container.querySelector('summary').textContent.trim(), 'History 1')
@@ -402,16 +422,14 @@ test('a save completing after a store switch cannot show another store report', 
   await act(async () => resolveSave(json(reportFromForm({ ...capturedForm, close_label: 'Private old store report' }))))
   await settle()
   assert.doesNotMatch(container.textContent, /Private old store report/)
-  assert.match(currentStep(), /Close details/)
+  assert.match(currentStep(), /Shift details/)
 })
 
-test('existing day close disables duplicate day creation and offers edit', async () => {
-  const existing = reportFromForm(completeForm({ report_date: localDate(), close_label: 'Already closed' }), 7)
-  history = [existing]
+test('new reporting workflow is shift-only and explains cumulative terminal entry', async () => {
   await render()
-  const dayButton = button('Day closeAlready saved for this date.')
-  assert.equal(dayButton.disabled, true)
-  assert.match(container.textContent, /A day close already exists/)
-  await click('Open the existing close')
-  assert.equal(input('close_label').value, 'Already closed')
+  assert.match(container.textContent, /Close a shift/)
+  assert.doesNotMatch(container.textContent, /Day closeAlready/)
+  await click('Continue')
+  assert.match(container.textContent, /Do not subtract earlier shifts/)
+  assert.ok(input('lottery_terminal_sales'))
 })

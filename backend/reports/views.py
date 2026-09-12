@@ -105,8 +105,14 @@ def _validate_payload(payload):
     }
 
 
-def _calculate_from_history(report, baseline, initial_active_slots=()):
+def _calculate_from_history(report, baseline, initial_active_slots=(), previous_terminal=None):
     payload = _report_payload(report)
+    if report.close_type == DailyReport.SHIFT and not report.terminal_values_cumulative:
+        previous_terminal = previous_terminal or {"sales": Decimal("0.00"), "payout": Decimal("0.00")}
+        # Old shift rows stored the amount for that shift. Convert it only for
+        # calculation and display; the original database values remain intact.
+        payload["lottery_terminal_sales"] += previous_terminal["sales"]
+        payload["lottery_terminal_payout"] += previous_terminal["payout"]
     readings = normalize_scratch_offs(payload["scratch_offs"])
     payload["scratch_offs"] = [
         {**reading, "previous_number": baseline.get(reading["slot_number"], (None, False))[0],
@@ -114,7 +120,12 @@ def _calculate_from_history(report, baseline, initial_active_slots=()):
          "initial_roll_active": reading["slot_number"] in initial_active_slots}
         for reading in readings
     ]
-    calculated = calculate_daily_report(payload, allow_missing_card_payments=True)
+    calculated = calculate_daily_report(
+        payload,
+        allow_missing_card_payments=True,
+        previous_terminal=previous_terminal,
+        legacy_day=report.close_type == DailyReport.DAY,
+    )
     # Persist an automatically inferred rollover so history, edits, and the
     # final report all show the effective number of new rolls.
     for reading in readings:
@@ -175,7 +186,7 @@ def _validate_day_after_shifts(calculated, readings, shift_state, shift_roll_cou
 
 
 def _replay_history(store, changed_report_id):
-    """Rebuild each slot chronologically; day closes do not double-count shifts."""
+    """Rebuild scratch and cumulative-terminal history chronologically."""
     history = list(DailyReport.objects.filter(store=store).order_by("report_date", "created_at", "id"))
     previous_day = {}
     for _, reports_for_date in groupby(history, key=lambda item: item.report_date):
@@ -185,12 +196,16 @@ def _replay_history(store, changed_report_id):
         initial_active_slots = set()
         ordered = [item for item in day_reports if item.close_type == DailyReport.SHIFT]
         ordered += [item for item in day_reports if item.close_type == DailyReport.DAY]
-        next_day = shift_state
+        next_day = shift_state.copy()
+        previous_terminal = {"sales": Decimal("0.00"), "payout": Decimal("0.00")}
         for report in ordered:
             baseline = previous_day if report.close_type == DailyReport.DAY else shift_state
             try:
                 calculated, readings = _calculate_from_history(
-                    report, baseline, initial_active_slots if report.close_type == DailyReport.DAY else (),
+                    report,
+                    baseline,
+                    initial_active_slots if report.close_type == DailyReport.DAY else (),
+                    previous_terminal if report.close_type == DailyReport.SHIFT else None,
                 )
                 if report.close_type == DailyReport.DAY:
                     _validate_day_after_shifts(calculated, readings, shift_state, shift_roll_counts)
@@ -214,8 +229,16 @@ def _replay_history(store, changed_report_id):
                 for reading in readings:
                     slot = reading["slot_number"]
                     shift_roll_counts[slot] = shift_roll_counts.get(slot, 0) + reading["new_roll_count"]
+                previous_terminal = {
+                    "sales": calculated["terminal"]["cumulative_sales"],
+                    "payout": calculated["terminal"]["cumulative_payout"],
+                }
+                # In the shift-only workflow the final shift carries inventory
+                # into the next business date.
+                next_day = shift_state.copy()
             else:
-                # Omitted day slots retain the most recent shift reading.
+                # Legacy manually entered day closes remain authoritative for
+                # historical dates and may still be corrected.
                 next_day = shift_state.copy()
                 _apply_endings(next_day, calculated)
         previous_day = next_day.copy()
@@ -237,6 +260,7 @@ def recalculate_store_history(store, *, dry_run=False):
 
 @transaction.atomic
 def _save_report(payload, store, report=None, *, partial=False):
+    submitted_terminal = any(field in payload for field in ("lottery_terminal_sales", "lottery_terminal_payout"))
     # Limit only submitted collections: historical reports may predate this
     # bound and must remain readable, recalculable, and partially editable.
     for _, field in LINE_ITEM_FIELDS:
@@ -249,17 +273,31 @@ def _save_report(payload, store, report=None, *, partial=False):
     if report is not None:
         report = DailyReport.objects.get(pk=report.pk, store=store)
         if partial:
-            payload = {**_report_payload(report), **payload}
+            existing = _report_payload(report)
+            if submitted_terminal and not report.terminal_values_cumulative:
+                existing["lottery_terminal_sales"] = report.calculated_report.get("inputs", {}).get(
+                    "lottery_terminal_sales", report.lottery_terminal_sales,
+                )
+                existing["lottery_terminal_payout"] = report.calculated_report.get("inputs", {}).get(
+                    "lottery_terminal_payout", report.lottery_terminal_payout,
+                )
+            payload = {**existing, **payload}
+        if payload.get("close_type") != report.close_type:
+            raise ValidationError({"close_type": "The close type of a saved report cannot be changed."})
+    elif payload.get("close_type") != DailyReport.SHIFT:
+        raise ValidationError({"close_type": "New reports must be shift closes. Daily summaries are created automatically."})
     values = _validate_payload(payload)
     if values["close_type"] == DailyReport.DAY and DailyReport.objects.filter(
         store=store, report_date=values["report_date"], close_type=DailyReport.DAY,
     ).exclude(pk=report.pk if report else None).exists():
         raise ValidationError({"report_date": "A day close already exists for this date."})
     if report is None:
-        report = DailyReport.objects.create(store=store, **values)
+        report = DailyReport.objects.create(store=store, terminal_values_cumulative=True, **values)
     else:
         for field, value in values.items():
             setattr(report, field, value)
+        if submitted_terminal:
+            report.terminal_values_cumulative = True
         report.save()
     report.line_items.all().delete()
     ReportLineItem.objects.bulk_create([
@@ -284,11 +322,143 @@ def _error_response(error):
     return JsonResponse({"errors": details}, status=400)
 
 
+def _summary_comparison(expected, actual):
+    difference = actual - expected
+    return {
+        "expected": format(expected, ".2f"),
+        "actual": format(actual, ".2f"),
+        "difference": format(difference, ".2f"),
+        "status": "match" if difference == 0 else "mismatch",
+    }
+
+
+def _daily_summaries(history):
+    """Build day-end results from saved shifts without duplicating inputs."""
+    summaries = []
+    scratch_state = {}
+    summed_fields = tuple(
+        field for field in MONEY_FIELDS
+        if field not in {"lottery_terminal_sales", "lottery_terminal_payout"}
+    )
+    for report_date, reports_for_date in groupby(history, key=lambda item: item.report_date):
+        date_reports = list(reports_for_date)
+        shifts = [item for item in date_reports if item.close_type == DailyReport.SHIFT]
+        for report in shifts:
+            for slot, result in report.calculated_report.get("scratch_off", {}).get("slots", {}).items():
+                scratch_state[str(slot)] = {
+                    "ending_number": result.get("ending_number"),
+                    "ending_exhausted": result.get("ending_exhausted", False),
+                }
+        if shifts:
+            inputs = {}
+            for field in summed_fields:
+                values = [getattr(report, field) for report in shifts]
+                inputs[field] = None if any(value is None for value in values) else sum(values, Decimal("0.00"))
+            scratch_sales = sum(
+                (Decimal(str(report.calculated_report["scratch_off"]["sales"])) for report in shifts),
+                Decimal("0.00"),
+            )
+            new_rolls_by_slot = {}
+            for report in shifts:
+                for reading in report.scratch_offs:
+                    slot = str(reading["slot_number"])
+                    new_rolls_by_slot[slot] = new_rolls_by_slot.get(slot, 0) + reading["new_roll_count"]
+            line_items = {}
+            for item_type, key in LINE_ITEM_FIELDS:
+                entries = [
+                    {
+                        "report_id": report.pk,
+                        "shift_name": report.close_label,
+                        "amount": item.amount,
+                        "description": item.description,
+                    }
+                    for report in shifts
+                    for item in report.line_items.all()
+                    if item.item_type == item_type
+                ]
+                line_items[key] = {
+                    "total": sum((entry["amount"] for entry in entries), Decimal("0.00")),
+                    "entries": entries,
+                }
+            latest = shifts[-1]
+            latest_terminal = latest.calculated_report.get("terminal", {})
+            terminal_sales = Decimal(str(latest_terminal.get("cumulative_sales", latest.lottery_terminal_sales)))
+            terminal_payout = Decimal(str(latest_terminal.get("cumulative_payout", latest.lottery_terminal_payout)))
+            register_sales = inputs["bodega_lottery_sales"] + inputs["gas_lottery_sales"]
+            register_payout = inputs["bodega_lottery_payout"] + inputs["gas_lottery_payout"]
+            phone_register = inputs["bodega_phone_card_sales"] + inputs["gas_phone_card_sales"]
+            gas_differences = [report.calculated_report["registers"].get("gas_net_difference") for report in shifts]
+            summaries.append({
+                "report_date": report_date.isoformat(),
+                "shift_count": len(shifts),
+                "shifts": [
+                    {
+                        "id": report.pk,
+                        "close_label": report.close_label,
+                        "created_at": report.created_at.isoformat(),
+                        "terminal_sales": report.calculated_report.get("terminal", {}).get(
+                            "shift_sales", format(report.lottery_terminal_sales, ".2f"),
+                        ),
+                        "terminal_payout": report.calculated_report.get("terminal", {}).get(
+                            "shift_payout", format(report.lottery_terminal_payout, ".2f"),
+                        ),
+                        "scratch_off_sales": report.calculated_report["scratch_off"]["sales"],
+                    }
+                    for report in shifts
+                ],
+                "terminal": {
+                    "final_cumulative_sales": terminal_sales,
+                    "final_cumulative_payout": terminal_payout,
+                },
+                "scratch_off": {
+                    "sales": scratch_sales,
+                    "total_new_rolls": sum(new_rolls_by_slot.values()),
+                    "new_rolls_by_slot": new_rolls_by_slot,
+                    "final_state": deepcopy(scratch_state),
+                },
+                "inputs": inputs,
+                "line_items": line_items,
+                "registers": {
+                    "lottery_sales": register_sales,
+                    "lottery_payout": register_payout,
+                    "bodega_net_difference": inputs["bodega_net_difference"],
+                    "gas_net_difference": None if any(value is None for value in gas_differences) else sum(
+                        (Decimal(str(value)) for value in gas_differences), Decimal("0.00"),
+                    ),
+                },
+                "comparisons": {
+                    "phone_card_sales": _summary_comparison(inputs["phone_card_actual_sales"], phone_register),
+                    "lottery_sales": _summary_comparison(terminal_sales, register_sales),
+                    "lottery_payout": _summary_comparison(terminal_payout, register_payout),
+                },
+            })
+        # A legacy day close, when present, remains the saved closing inventory
+        # for the following date. It is not included in the generated summary.
+        for report in (item for item in date_reports if item.close_type == DailyReport.DAY):
+            for slot, result in report.calculated_report.get("scratch_off", {}).get("slots", {}).items():
+                scratch_state[str(slot)] = {
+                    "ending_number": result.get("ending_number"),
+                    "ending_exhausted": result.get("ending_exhausted", False),
+                }
+    return _json_value(summaries)
+
+
+def _history_json(store):
+    history = list(
+        DailyReport.objects.filter(store=store)
+        .prefetch_related("line_items", "scratch_off_rolls")
+        .order_by("report_date", "created_at", "id")
+    )
+    return {
+        "reports": [_report_json(report) for report in reversed(history)],
+        "daily_summaries": list(reversed(_daily_summaries(history))),
+    }
+
+
 @store_required
 def reports(request):
     if request.method == "GET":
-        queryset = DailyReport.objects.filter(store=request.store).prefetch_related("line_items", "scratch_off_rolls")
-        return JsonResponse({"reports": [_report_json(report) for report in queryset]})
+        return JsonResponse(_history_json(request.store))
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed."}, status=405)
     try:

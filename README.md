@@ -98,37 +98,50 @@ minutes. The stored counters use keyed hashes rather than usernames or IP
 addresses. Successful attempts count toward the limit, and a blocked retry does
 not extend the fifteen-minute window.
 
-## Closing a day or shift
+## Closing shifts and reviewing the day
 
-The form has five steps: close details, independent totals, scratch-off counters,
+The form has five steps: shift details, machine totals, scratch-off counters,
 Bodega AI figures, and Verifone figures. Monetary fields are required;
 explicit zero is accepted. Bodega's net difference may be negative. Tickets,
 vendor payouts, and safe drops are optional lists with amounts and descriptions.
 Signed fields use a separate `+`/`−` selector so they work with mobile numeric
 keypads that do not provide a minus key.
 
-A **shift close** covers the current shift. Scratch-off counters follow earlier
-shifts on the same business date in the order those reports were created.
-Independent machine/register amounts and new-roll counts should cover that shift.
+A shift close covers activity since the previous shift. Scratch-off counters
+follow earlier shifts in creation order, including the final shift from the
+previous business date. Register amounts and new-roll counts cover only the
+current shift.
 
-A **day close** covers the full business day, including its shifts. Enter the
-whole day's totals and cumulative new-roll counts. Scratch-off calculations use
-the preceding date's closing state, so shifts are not added twice. There can be
-only one day close per store/date. The history shows dates with shifts that still
-need a day close.
+Lottery terminal sales and payout are different: enter the terminal's current
+**cumulative** readings without subtracting earlier shifts. The backend assigns
+the first shift the full reading and assigns later shifts the difference from
+the preceding cumulative reading. A cumulative reading cannot decrease within a
+business date.
 
-History lets you review and edit saved reports. Correcting or backdating a report
-recalculates subsequent scratch-off results for that store. If a correction would
-make a later counter invalid, the save is rejected with the conflicting report
-identified, and the transaction leaves the reports unchanged.
+Existing shift rows from the earlier workflow retain their original per-shift
+terminal amounts. A compatibility marker lets history replay translate them to
+cumulative readings without rewriting those saved inputs. Saving an edited
+legacy shift stores the displayed cumulative reading in the new format.
+
+The application derives a daily summary automatically. It combines every shift,
+uses the final cumulative terminal readings for day-end lottery reconciliation,
+sums scratch-off sales and new rolls, carries the final scratch state forward,
+and totals register figures, phone cards, safe drops, tickets, and vendor
+payouts. Previously saved manual day closes remain editable legacy records.
+
+History lets you review individual shifts, automatic daily summaries, and legacy
+day closes. Correcting or backdating a shift recalculates subsequent scratch-off
+and terminal results for that store. If a correction makes a later counter or
+cumulative reading invalid, the save identifies the conflicting report and the
+transaction leaves the history unchanged.
 
 ## Calculation rules
 
 | Comparison | Expected | Recorded by the registers |
 | --- | --- | --- |
 | Phone-card sales | Independent phone-card machine sales | Bodega phone-card sales + Verifone phone-card sales |
-| Lottery sales | Scratch-off sales + lottery terminal sales | Bodega lottery sales + Verifone lottery sales |
-| Lottery payouts | Lottery terminal payout | Bodega lottery payout + Verifone lottery payout |
+| Shift lottery sales | Current cumulative terminal sales − previous cumulative terminal sales | Bodega lottery sales + Verifone lottery sales |
+| Shift lottery payouts | Current cumulative terminal payout − previous cumulative terminal payout | Bodega lottery payout + Verifone lottery payout |
 
 Difference = recorded − expected. Exactly zero is a match. Django validates
 money using decimal arithmetic with up to two decimal places and at most
@@ -159,8 +172,8 @@ sold**: 020 on a 000–024 roll leaves four tickets, 021–024. For an active ro
 tickets sold normally means today's ending counter minus the previous counter.
 Replacing a roll counts the remainder of the old roll, any complete additional
 rolls, and tickets 000 through the last ticket sold on the current roll. This
-convention is consistent across first readings, shifts, roll replacements, and
-day closes; completing a 25-ticket roll can never count 26 tickets.
+convention is consistent across first readings, shifts, and roll replacements;
+completing a 25-ticket roll can never count 26 tickets.
 
 A blank ending after a known counter means the remainder of that roll sold.
 Repeated blanks on that exhausted roll add no further sales; enter a new-roll
@@ -187,7 +200,7 @@ is not reused by shared caches.
 | `/api/auth/login/` | POST | Sign in with username/password; returns a fresh token |
 | `/api/auth/logout/` | POST | End the session |
 | `/api/lottery/catalog/` | GET | Public slot prices and counter limits |
-| `/api/reports/` | GET, POST | List or create reports for the selected store |
+| `/api/reports/` | GET, POST | List shifts and derived daily summaries, or create a shift |
 | `/api/reports/<id>/` | GET, PUT, PATCH | Retrieve, replace, or partially update a report |
 | `/api/health/` | GET | Application liveness; does not check the database |
 

@@ -99,7 +99,7 @@ class DailyReportCalculationTests(SimpleTestCase):
                 "lottery_terminal_payout": "25.00",
                 "phone_card_actual_sales": "60.00",
                 "bodega_net_difference": "-1.25",
-                "bodega_lottery_sales": "60.00",
+                "bodega_lottery_sales": "20.00",
                 "bodega_lottery_payout": "10.00",
                 "bodega_phone_card_sales": "20.00",
                 "bodega_gas_sales": "100.00",
@@ -133,7 +133,7 @@ class DailyReportApiTests(TestCase):
     def test_create_and_list_report(self):
         payload = {
             "report_date": "2026-09-10",
-            "close_type": "day",
+            "close_type": "shift",
             "close_label": "",
             "lottery_terminal_sales": "0.00",
             "lottery_terminal_payout": "0.00",
@@ -161,7 +161,7 @@ class DailyReportApiTests(TestCase):
 
     def test_update_report_recalculates_and_replaces_normalized_items(self):
         payload = {
-            "report_date": "2026-09-10", "close_type": "day", "close_label": "",
+            "report_date": "2026-09-10", "close_type": "shift", "close_label": "",
             "lottery_terminal_sales": "0.00", "lottery_terminal_payout": "0.00", "phone_card_actual_sales": "0.00",
             "bodega_net_difference": "-1.25", "bodega_lottery_sales": "0.00", "bodega_lottery_payout": "0.00",
             "bodega_phone_card_sales": "0.00", "bodega_gas_sales": "0.00", "gas_cash_sales": "100.00",

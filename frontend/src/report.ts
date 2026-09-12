@@ -8,8 +8,8 @@ export type Session = { user: { id: number; username: string } | null; stores: S
 export type FieldErrors = Record<string, string>
 
 export const independentFields = [
-  ['lottery_terminal_sales', 'Actual lottery terminal sales'],
-  ['lottery_terminal_payout', 'Actual lottery payout'],
+  ['lottery_terminal_sales', 'Current cumulative lottery terminal sales'],
+  ['lottery_terminal_payout', 'Current cumulative lottery terminal payout'],
   ['phone_card_actual_sales', 'Actual phone card sales'],
 ] as const
 export const bodegaFields = [
@@ -50,15 +50,34 @@ export type Report = {
       }>
     }
     comparisons: { phone_card_sales: Comparison; lottery_sales: Comparison; lottery_payout: Comparison }
+    terminal: {
+      cumulative_sales: string; cumulative_payout: string
+      previous_cumulative_sales: string; previous_cumulative_payout: string
+      shift_sales: string; shift_payout: string
+    }
     registers: { bodega_net_difference: string; gas_net_difference: string | null }
     normalized_line_items?: { item_type: string; amount: string; description: string }[]
     normalized_scratch_offs?: { slot_number: number; ending_number: number | null; new_roll_count: number }[]
   }
 }
 
+export type DailySummary = {
+  report_date: string; shift_count: number
+  shifts: { id: number; close_label: string; created_at: string; terminal_sales: string; terminal_payout: string; scratch_off_sales: string }[]
+  terminal: { final_cumulative_sales: string; final_cumulative_payout: string }
+  scratch_off: {
+    sales: string; total_new_rolls: number; new_rolls_by_slot: Record<string, number>
+    final_state: Record<string, { ending_number: number | null; ending_exhausted: boolean }>
+  }
+  inputs: Partial<Record<AmountKey, string | null>>
+  line_items: Record<ItemKey, { total: string; entries: { report_id: number; shift_name: string; amount: string; description: string }[] }>
+  registers: { lottery_sales: string; lottery_payout: string; bodega_net_difference: string; gas_net_difference: string | null }
+  comparisons: { phone_card_sales: Comparison; lottery_sales: Comparison; lottery_payout: Comparison }
+}
+
 export const steps = [
-  { label: 'Close details', fields: ['report_date', 'close_type', 'close_label'] },
-  { label: 'Independent totals', fields: independentFields.map(([key]) => key) },
+  { label: 'Shift details', fields: ['report_date', 'close_label'] },
+  { label: 'Machine totals', fields: independentFields.map(([key]) => key) },
   { label: 'Scratch-off count', fields: ['scratch_offs'] },
   { label: 'Bodega AI', fields: bodegaFields.map(([key]) => key) },
   { label: 'Verifone', fields: [...gasFields.map(([key]) => key), ...itemGroups.map(({ key }) => key)] },
@@ -66,7 +85,7 @@ export const steps = [
 export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 export const initialScratch = (): ScratchOff[] => Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ending_number: '', new_roll_count: 0 }))
 export const initialForm = (): FormState => ({
-  report_date: localDate(), close_type: 'day', close_label: '',
+  report_date: localDate(), close_type: 'shift', close_label: '',
   ...Object.fromEntries(fields.map(([key]) => [key, ''])) as Record<AmountKey, string>,
   tickets: [], vendor_payouts: [], safe_drops: [], scratch_offs: initialScratch(),
 })
@@ -100,6 +119,3 @@ export function errorStep(errors: FieldErrors): number | undefined {
   const indexes = Object.keys(errors).map((path) => steps.findIndex((step) => step.fields.includes(path.split('.')[0]))).filter((index) => index >= 0)
   return indexes.length ? Math.min(...indexes) : undefined
 }
-
-export const pendingDates = (reports: Report[]) => [...new Set(reports.filter((report) => report.close_type === 'shift').map((report) => report.report_date))]
-  .filter((date) => !reports.some((report) => report.report_date === date && report.close_type === 'day')).sort().reverse()

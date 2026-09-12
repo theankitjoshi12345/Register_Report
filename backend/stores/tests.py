@@ -23,7 +23,7 @@ def close_payload(**changes):
         "0.00",
     )
     return {
-        **values, "report_date": "2026-09-10", "close_type": "day", "close_label": "",
+        **values, "report_date": "2026-09-10", "close_type": "shift", "close_label": "",
         "scratch_offs": [], "tickets": [], "vendor_payouts": [], "safe_drops": [],
         **changes,
     }
@@ -109,6 +109,7 @@ class StoreAccessTests(TestCase):
         self.client.force_login(self.admin)
         response = self.client.get("/api/reports/", HTTP_X_STORE_ID=str(self.other_store.pk))
         self.assertEqual(response.json()["reports"], [])
+        self.assertEqual(response.json()["daily_summaries"], [])
         self.assertEqual(self.client.get(f"/api/reports/{own.json()['id']}/", HTTP_X_STORE_ID=str(self.other_store.pk)).status_code, 404)
 
     def test_membership_revocation_takes_effect_without_new_login(self):

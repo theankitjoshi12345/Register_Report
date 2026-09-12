@@ -3,16 +3,19 @@
 ## Implemented
 
 - React/TypeScript/Tailwind form with five validated steps.
-- Day and shift closes, report history, and editable saved reports.
+- Shift closes, automatic daily summaries, report history, and editable saved reports.
 - Independent lottery/phone-card comparisons and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Scratch-off history scoped to each store, including exhausted rolls.
-- Shift counters chained by creation order within a business date; full-day closes
-  calculated separately against the preceding date's closing state.
+- Shift counters chained by creation order within and across business dates.
+- Cumulative lottery terminal readings converted into shift-only sales and payout,
+  with later shifts replayed after an earlier correction.
+- Legacy per-shift terminal inputs preserved in place and translated during replay.
+- Automatic daily summaries using the final terminal readings and combined shift
+  register, scratch-off, phone-card, new-roll, and line-item totals.
 - Recalculation of later reports following corrections/backdated entries, with
   atomic rollback for inconsistent history.
-- One day close per store and business date; pending day-close indicators.
 - Normalized line items and scratch-off rows alongside calculation snapshots.
 - Django session login, CSRF-protected writes, store memberships, and store selection.
 - Administrator management of stores and users through Django admin.
@@ -30,9 +33,10 @@ Verifone balance; the app does not fabricate it.
 Authentication and store authorization are now included, superseding the earlier
 deferral in the original project notes. `PERSONAL.md` reflects the current requirements.
 
-Shift totals and new rolls cover a shift. Day totals and new rolls cover the full
-day. Same-date shift ordering follows report creation order. The form explicitly
-uses **last ticket sold** for ending counters, consistently across roll boundaries.
+Shift totals and new rolls cover a shift. Daily results are derived from the
+saved shifts rather than entered again. Same-date shift ordering follows report
+creation order. The form explicitly uses **last ticket sold** for ending counters,
+consistently across roll boundaries.
 This resolves the old formulas' one-ticket double count when a roll finished.
 A blank scratch-off
 counter exhausts a known roll, but a first blank with no history establishes no
@@ -40,8 +44,7 @@ sales. These conventions are documented in the README and form.
 
 ## Remaining product work
 
-- Hosting, HTTPS deployment, database backup/restore procedures, and production
-  browser verification.
+- Database backup and restore procedures.
 - Printing/exporting reports if needed.
 - Store-configurable scratch-off catalogs and business time zones if needed.
 - Explicit shift times/reordering and an opening-inventory workflow if needed.

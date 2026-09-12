@@ -88,3 +88,79 @@ class ReportDataMigrationTests(TransactionTestCase):
         self.assertEqual(report.gas_phone_card_sales, Decimal("25.00"))
         self.assertIsNone(report.gas_card_payment_sales)
         self.assertEqual(report.scratch_off_rolls.count(), 2)
+
+
+class ShiftTerminalCompatibilityMigrationTests(TransactionTestCase):
+    migrate_from = [("reports", "0006_signed_ticket_amounts"), ("stores", "0002_loginattemptbucket")]
+    migrate_to = [("reports", "0007_cumulative_shift_terminal_readings"), ("stores", "0002_loginattemptbucket")]
+
+    def setUp(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        store, _ = old_apps.get_model("stores", "Store").objects.get_or_create(
+            pk=1, defaults={"name": "Main store"},
+        )
+        Report = old_apps.get_model("reports", "DailyReport")
+        values = {
+            "phone_card_actual_sales": "0.00", "bodega_net_difference": "0.00",
+            "bodega_lottery_sales": "0.00", "bodega_lottery_payout": "0.00",
+            "bodega_phone_card_sales": "0.00", "bodega_gas_sales": "0.00",
+            "gas_cash_sales": "0.00", "gas_lottery_sales": "0.00",
+            "gas_lottery_payout": "0.00", "gas_phone_card_sales": "0.00",
+            "gas_card_payment_sales": "0.00",
+        }
+        self.shift_ids = [
+            Report.objects.create(
+                store=store, report_date="2026-09-10", close_type="shift",
+                lottery_terminal_sales=sales, lottery_terminal_payout=payout, **values,
+            ).pk
+            for sales, payout in [("500.00", "100.00"), ("700.00", "150.00"), ("400.00", "70.00")]
+        ]
+        self.next_date_id = Report.objects.create(
+            store=store, report_date="2026-09-11", close_type="shift",
+            lottery_terminal_sales="200.00", lottery_terminal_payout="40.00", **values,
+        ).pk
+        self.legacy_day_id = Report.objects.create(
+            store=store, report_date="2026-09-10", close_type="day",
+            lottery_terminal_sales="999.00", lottery_terminal_payout="88.00", **values,
+        ).pk
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        self.apps = executor.loader.project_state(self.migrate_to).apps
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDown()
+
+    def test_existing_shift_amounts_remain_unchanged_and_are_marked_legacy(self):
+        Report = self.apps.get_model("reports", "DailyReport")
+        shifts = Report.objects.filter(pk__in=self.shift_ids).order_by("created_at", "id")
+        self.assertEqual(
+            list(shifts.values_list("lottery_terminal_sales", "lottery_terminal_payout")),
+            [
+                (Decimal("500.00"), Decimal("100.00")),
+                (Decimal("700.00"), Decimal("150.00")),
+                (Decimal("400.00"), Decimal("70.00")),
+            ],
+        )
+        self.assertEqual(list(shifts.values_list("terminal_values_cumulative", flat=True)), [False, False, False])
+        next_date = Report.objects.get(pk=self.next_date_id)
+        self.assertEqual(next_date.lottery_terminal_sales, Decimal("200.00"))
+        legacy_day = Report.objects.get(pk=self.legacy_day_id)
+        self.assertEqual(legacy_day.lottery_terminal_sales, Decimal("999.00"))
+
+    def test_reverse_removes_marker_without_changing_amounts(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        Report = executor.loader.project_state(self.migrate_from).apps.get_model("reports", "DailyReport")
+        shifts = Report.objects.filter(pk__in=self.shift_ids).order_by("created_at", "id")
+        self.assertEqual(
+            list(shifts.values_list("lottery_terminal_sales", "lottery_terminal_payout")),
+            [
+                (Decimal("500.00"), Decimal("100.00")),
+                (Decimal("700.00"), Decimal("150.00")),
+                (Decimal("400.00"), Decimal("70.00")),
+            ],
+        )

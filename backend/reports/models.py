@@ -101,6 +101,9 @@ class DailyReport(models.Model):
     close_label = models.CharField(max_length=80, blank=True)
     lottery_terminal_sales = models.DecimalField(max_digits=12, decimal_places=2)
     lottery_terminal_payout = models.DecimalField(max_digits=12, decimal_places=2)
+    # False identifies shift values saved before cumulative terminal entry was
+    # introduced. Replay translates them without rewriting historical inputs.
+    terminal_values_cumulative = models.BooleanField(default=False)
     phone_card_actual_sales = models.DecimalField(max_digits=12, decimal_places=2)
     bodega_net_difference = models.DecimalField(max_digits=12, decimal_places=2)
     bodega_lottery_sales = models.DecimalField(max_digits=12, decimal_places=2)

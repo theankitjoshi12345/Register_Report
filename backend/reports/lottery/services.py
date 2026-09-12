@@ -1,5 +1,7 @@
 """Store reconciliation using exact money and last-ticket-sold scratch counters."""
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 
 from .catalog import get_slot, validate_ticket_number
@@ -61,7 +63,6 @@ def calculate_scratch_off_sales(readings):
     """
     normalized = normalize_scratch_offs(readings)
     slots = {}
-    from decimal import Decimal
     total_sales = Decimal("0.00")
     for index, (reading, normalized_reading) in enumerate(zip(readings, normalized)):
         slot_number = normalized_reading["slot_number"]
@@ -120,7 +121,7 @@ def calculate_scratch_off_sales(readings):
 
 
 def _money(value, field, allow_negative=False):
-    from decimal import Decimal, InvalidOperation
+    from decimal import InvalidOperation
 
     if value is None or isinstance(value, bool) or value == "":
         raise ValidationError({field: "Enter an amount."})
@@ -173,8 +174,10 @@ def _line_items(values, field):
     return result
 
 
-def calculate_daily_report(data, *, allow_missing_card_payments=False):
-    """Validate and calculate all day/shift close comparisons."""
+def calculate_daily_report(
+    data, *, allow_missing_card_payments=False, previous_terminal=None, legacy_day=False,
+):
+    """Validate one close and derive its non-cumulative terminal amounts."""
     if not isinstance(data, dict):
         raise ValidationError("The report must be a JSON object.")
     values = {
@@ -194,6 +197,19 @@ def calculate_daily_report(data, *, allow_missing_card_payments=False):
     pos_lottery_sales = values["bodega_lottery_sales"] + values["gas_lottery_sales"]
     pos_lottery_payout = values["bodega_lottery_payout"] + values["gas_lottery_payout"]
     pos_phone_cards = values["bodega_phone_card_sales"] + values["gas_phone_card_sales"]
+    previous_terminal = previous_terminal or {
+        "sales": Decimal("0.00"), "payout": Decimal("0.00"),
+    }
+    shift_terminal_sales = values["lottery_terminal_sales"] - previous_terminal["sales"]
+    shift_terminal_payout = values["lottery_terminal_payout"] - previous_terminal["payout"]
+    if not legacy_day and shift_terminal_sales < 0:
+        raise ValidationError({
+            "lottery_terminal_sales": "The cumulative sales reading cannot be lower than the previous shift reading.",
+        })
+    if not legacy_day and shift_terminal_payout < 0:
+        raise ValidationError({
+            "lottery_terminal_payout": "The cumulative payout reading cannot be lower than the previous shift reading.",
+        })
     gas_net = None if values["gas_card_payment_sales"] is None else (
         values["gas_cash_sales"] - values["bodega_gas_sales"] - safe_drop_total
         - ticket_total - vendor_total - values["gas_card_payment_sales"]
@@ -213,8 +229,22 @@ def calculate_daily_report(data, *, allow_missing_card_payments=False):
         "scratch_off": {"slots": scratch["slots"], "sales": scratch_sales},
         "comparisons": {
             "phone_card_sales": comparison(values["phone_card_actual_sales"], pos_phone_cards),
-            "lottery_sales": comparison(scratch_sales + values["lottery_terminal_sales"], pos_lottery_sales),
-            "lottery_payout": comparison(values["lottery_terminal_payout"], pos_lottery_payout),
+            "lottery_sales": comparison(
+                scratch_sales + values["lottery_terminal_sales"] if legacy_day else shift_terminal_sales,
+                pos_lottery_sales,
+            ),
+            "lottery_payout": comparison(
+                values["lottery_terminal_payout"] if legacy_day else shift_terminal_payout,
+                pos_lottery_payout,
+            ),
+        },
+        "terminal": {
+            "cumulative_sales": values["lottery_terminal_sales"],
+            "cumulative_payout": values["lottery_terminal_payout"],
+            "previous_cumulative_sales": previous_terminal["sales"],
+            "previous_cumulative_payout": previous_terminal["payout"],
+            "shift_sales": values["lottery_terminal_sales"] if legacy_day else shift_terminal_sales,
+            "shift_payout": values["lottery_terminal_payout"] if legacy_day else shift_terminal_payout,
         },
         "registers": {
             "bodega_net_difference": values["bodega_net_difference"],
