@@ -132,6 +132,10 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   }
   await click('Save report')
   assert.match(container.textContent, /Report for 2026-09-10/)
+  for (const label of ['Verifone total cash sales', 'Verifone lottery sales', 'Verifone lottery payout', 'Verifone phone card sales']) {
+    assert.match(container.textContent, new RegExp(label))
+  }
+  assert.doesNotMatch(container.textContent, /Gas (?:total cash|lottery|phone card)|Gas register/)
   assert.match(container.textContent, /Customer tab/); assert.match(container.textContent, /Bread delivery/); assert.match(container.textContent, /Evening deposit/)
   assert.match(container.textContent, /Starting number/); assert.match(container.textContent, /Value generated/)
   assert.match(container.textContent, /003/); assert.match(container.textContent, /004/); assert.match(container.textContent, /\$5.00/)
