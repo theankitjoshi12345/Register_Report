@@ -27,15 +27,14 @@ def store_required(view):
                 return JsonResponse({"errors": "Choose a valid store."}, status=400)
             store = stores.filter(pk=int(selected)).first()
             if store is None:
-                return JsonResponse({"errors": "Store not found."}, status=404)
+                return JsonResponse({"errors": "Store not found.", "code": "store_access_denied"}, status=404)
         else:
             store = stores.first()
             if store is None:
-                return JsonResponse({"errors": "Your account has no store access. Ask an administrator to add you to a store."}, status=403)
+                return JsonResponse({"errors": "Your account has no store access. Ask an administrator to add you to a store.", "code": "store_access_denied"}, status=403)
         request.store = store
         response = view(request, *args, **kwargs)
         response["Cache-Control"] = "no-store"
         return response
 
     return wrapped
-

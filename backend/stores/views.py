@@ -1,7 +1,5 @@
 """Session login for the React app, using Django's session and CSRF protections."""
 
-import json
-
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
@@ -10,6 +8,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from .access import accessible_stores
+from .credentials import parse_login_credentials
 
 
 def session_data(request):
@@ -32,19 +31,10 @@ def session(request):
 @require_POST
 def sign_in(request):
     try:
-        if len(request.body) > 16384:
-            raise ValueError
-        data = json.loads(request.body)
-        if not isinstance(data, dict):
-            raise ValueError
-        username, password = data.get("username"), data.get("password")
-        if not isinstance(username, str) or not isinstance(password, str) or not username.strip() or not password:
-            raise ValueError
-        if len(username) > 150 or len(password) > 4096:
-            raise ValueError
-    except (ValueError, UnicodeDecodeError):
+        username, password = parse_login_credentials(request.body)
+    except ValueError:
         return JsonResponse({"errors": "Enter your username and password."}, status=400)
-    user = authenticate(request, username=username.strip(), password=password)
+    user = authenticate(request, username=username, password=password)
     if user is None:
         return JsonResponse({"errors": "The username or password is incorrect."}, status=401)
     login(request, user)
@@ -64,4 +54,3 @@ def csrf_failure(request, reason=""):
     from django.views.csrf import csrf_failure as default_csrf_failure
 
     return default_csrf_failure(request, reason=reason)
-

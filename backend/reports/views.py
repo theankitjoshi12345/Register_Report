@@ -15,7 +15,7 @@ from stores.access import store_required
 from stores.models import Store
 
 from .lottery.catalog import SCRATCH_OFF_SLOTS
-from .lottery.services import MONEY_FIELDS, _text, calculate_daily_report, normalize_scratch_offs
+from .lottery.services import MAX_LINE_ITEMS, MONEY_FIELDS, _text, calculate_daily_report, normalize_scratch_offs
 from .models import DailyReport, ReportLineItem, ScratchOffRoll
 
 LINE_ITEM_FIELDS = (
@@ -237,6 +237,12 @@ def recalculate_store_history(store, *, dry_run=False):
 
 @transaction.atomic
 def _save_report(payload, store, report=None, *, partial=False):
+    # Limit only submitted collections: historical reports may predate this
+    # bound and must remain readable, recalculable, and partially editable.
+    for _, field in LINE_ITEM_FIELDS:
+        items = payload.get(field, [])
+        if isinstance(items, list) and len(items) > MAX_LINE_ITEMS:
+            raise ValidationError({field: f"Enter no more than {MAX_LINE_ITEMS} items per report."})
     # UPDATE is deliberately the transaction's first database operation: SQLite
     # acquires its write lock here; PostgreSQL serializes on this store row.
     Store.objects.filter(pk=store.pk).update(name=F("name"))

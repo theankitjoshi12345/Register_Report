@@ -92,6 +92,12 @@ and scratch-off history are scoped to the selected store. Login uses Django
 sessions, and writes require a CSRF token. Removing membership revokes access on
 the next request.
 
+Sign-in attempts are limited in the database across application instances: ten
+attempts per account and sixty attempts per client network within fifteen
+minutes. The stored counters use keyed hashes rather than usernames or IP
+addresses. Successful attempts count toward the limit, and a blocked retry does
+not extend the fifteen-minute window.
+
 ## Closing a day or shift
 
 The form has five steps: close details, independent totals, scratch-off counters,
@@ -168,6 +174,12 @@ accurate opening history before relying on the first reported day's sales.
 All report endpoints require a signed-in session. Select a store with the
 `X-Store-ID` header; if omitted, the first accessible store is used. Mutations also
 require `X-CSRFToken`, obtained from the session endpoint.
+
+API request bodies are limited to 1 MiB, with a 16 KiB limit for login. A report
+can contain up to 500 entries in each optional line-item group. These limits keep
+one request from consuming unbounded memory or database work. API responses use
+`private, no-store` and vary by session and selected store so authenticated data
+is not reused by shared caches.
 
 | Endpoint | Methods | Purpose |
 | --- | --- | --- |
@@ -260,6 +272,9 @@ existing SQLite data. `make db-stop` retains the PostgreSQL volume.
 
 The Vercel deployment needs HTTPS, a private Django secret, and the connected
 Neon database. Secure session and CSRF cookies default on when debug is off.
+Production responses redirect HTTP to HTTPS, enable HSTS, and include a content
+security policy, clickjacking protection, content-type sniffing protection, a
+same-origin referrer policy, and a restrictive browser permissions policy.
 Vite's local preview command serves the frontend build only; use the normal
 two-server development commands when testing the API locally.
 
@@ -274,6 +289,6 @@ api/index.py          Vercel Python Function entry point for Django
 scripts/setup.sh      Repeatable local dependency/database setup
 compose.yaml          Optional local PostgreSQL service
 Makefile              Setup, development, and verification commands
-PERSONAL.md           Original store requirements (preserved unchanged)
+PERSONAL.md           Store requirements and product decisions
 PLAN.md               Implementation status and remaining product work
 ```

@@ -31,3 +31,10 @@ class StoreMembership(models.Model):
     def __str__(self):
         return f"{self.user} — {self.store}"
 
+
+class LoginAttemptBucket(models.Model):
+    """Shared login limits; keys contain keyed hashes, never credentials or IPs."""
+
+    key = models.CharField(max_length=64, primary_key=True)
+    attempts = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)

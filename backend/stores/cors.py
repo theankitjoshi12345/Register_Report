@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils.cache import patch_vary_headers
 
 
 class CorsMiddleware:
@@ -17,5 +18,7 @@ class CorsMiddleware:
             response["Access-Control-Allow-Credentials"] = "true"
             response["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken, X-Store-ID"
             response["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, OPTIONS"
-            response["Vary"] = "Origin"
+        # Preserve Django's Cookie variation and vary even when this request's
+        # origin is absent/disallowed, since an allowed origin changes headers.
+        patch_vary_headers(response, ("Origin",))
         return response

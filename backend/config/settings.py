@@ -48,9 +48,11 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "stores.cors.CorsMiddleware",
+    "config.security.ApiBoundaryMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "stores.throttling.LoginThrottleMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -107,3 +109,19 @@ SESSION_COOKIE_SAMESITE = "None" if CROSS_SITE_COOKIES else "Lax"
 SESSION_COOKIE_SECURE = env.bool("DJANGO_SECURE_COOKIES", default=not DEBUG)
 CSRF_COOKIE_SAMESITE = "None" if CROSS_SITE_COOKIES else "Lax"
 CSRF_COOKIE_SECURE = env.bool("DJANGO_SECURE_COOKIES", default=not DEBUG)
+
+# Trust proxy headers only on the Vercel ingress that supplies them. Other hosts
+# must opt in after configuring their proxy to replace client-supplied headers.
+ON_VERCEL = env("VERCEL", default="") == "1"
+LOGIN_TRUST_VERCEL_IP = ON_VERCEL
+if ON_VERCEL or env.bool("DJANGO_TRUST_PROXY_HTTPS", default=False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = env.bool("DJANGO_SSL_REDIRECT", default=not DEBUG)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+
+LOGIN_ACCOUNT_LIMIT = 10
+LOGIN_IP_LIMIT = 60
+LOGIN_WINDOW_SECONDS = 900
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024

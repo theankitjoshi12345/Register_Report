@@ -7,10 +7,12 @@ const configuredApiBase = (runtimeEnv.VITE_API_BASE_URL ?? '').replace(/\/+$/, '
 export class ApiError extends Error {
   status: number
   errors: FieldErrors
-  constructor(message: string, status = 0, errors: FieldErrors = {}) {
+  code?: string
+  constructor(message: string, status = 0, errors: FieldErrors = {}, code?: string) {
     super(message)
     this.status = status
     this.errors = errors
+    this.code = code
   }
 }
 
@@ -33,7 +35,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
       : typeof body.errors === 'string' ? body.errors : errors.form ? errors.form
       : Object.keys(errors).length ? 'Please correct the highlighted entries.'
         : response.status >= 500 ? 'The report service could not complete this request. Please try again.' : 'The request could not be completed.'
-    throw new ApiError(message, response.status, errors)
+    throw new ApiError(message, response.status, errors, typeof body.code === 'string' ? body.code : undefined)
   }
   return data as T
 }

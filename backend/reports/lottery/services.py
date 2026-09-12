@@ -13,6 +13,7 @@ MONEY_FIELDS = (
     "gas_lottery_sales", "gas_lottery_payout", "gas_phone_card_sales", "gas_card_payment_sales",
 )
 MAX_NEW_ROLL_COUNT = 32766  # Stored as count + 1 in a PositiveSmallIntegerField.
+MAX_LINE_ITEMS = 500  # Bound per-report validation and database write work.
 
 
 def normalize_scratch_offs(readings):
@@ -141,6 +142,14 @@ def _money(value, field, allow_negative=False):
 def _text(value, field, max_length):
     if not isinstance(value, str):
         raise ValidationError({field: "Enter text."})
+    # PostgreSQL text cannot contain NUL or unpaired UTF-16 surrogates. Reject
+    # both before persisting so malformed JSON strings cannot trigger a 500.
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ValidationError({field: "Enter text without unsupported characters."}) from None
+    if "\x00" in value:
+        raise ValidationError({field: "Enter text without unsupported characters."})
     value = value.strip()
     if len(value) > max_length:
         raise ValidationError({field: f"Use no more than {max_length} characters."})

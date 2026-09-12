@@ -234,6 +234,93 @@ test('401 while saving clears private report state and returns to sign-in', asyn
   assert.doesNotMatch(container.textContent, /Save report/)
 })
 
+test('revoked store access clears private report data and reloads available stores', async () => {
+  await render(); await enter('close_label', 'Revoked store private close'); await goToGas(); await fillVisible()
+  let saved = false
+  override = (call) => {
+    if (call.url === '/api/reports/' && call.method === 'POST') {
+      saved = true
+      auth = { ...signedIn, stores: [signedIn.stores[1]] }
+    }
+    if (saved && call.url === '/api/reports/' && call.method === 'GET') {
+      return call.headers['X-Store-ID'] === '1'
+        ? json({ errors: 'Store not found.', code: 'store_access_denied' }, 404)
+        : json({ reports: [] })
+    }
+    return null
+  }
+  await click('Save report')
+  assert.match(container.textContent, /Your access to this store has changed/)
+  assert.doesNotMatch(container.textContent, /Revoked store private close|Main store|Report for/)
+  assert.match(container.textContent, /Second store/)
+  assert.equal(input('close_label').value, '')
+  assert.equal(requests.filter((call) => call.url === '/api/reports/' && call.method === 'GET').at(-1).headers['X-Store-ID'], '2')
+})
+
+test('saving after the last store membership is revoked clears the draft and history', async () => {
+  history = [reportFromForm(completeForm({ close_label: 'Private history' }))]
+  await render(); await enter('report_date', '2026-09-11'); await enter('close_label', 'Private draft'); await goToGas(); await fillVisible()
+  override = (call) => {
+    if (call.url === '/api/reports/' && call.method === 'POST') {
+      auth = { ...signedIn, stores: [] }
+      return json({ errors: 'Store not found.', code: 'store_access_denied' }, 404)
+    }
+    return null
+  }
+  await click('Save report')
+  assert.match(container.textContent, /No store access yet/)
+  assert.doesNotMatch(container.textContent, /Private history|Private draft|Save report/)
+  assert.equal(container.querySelector('summary').textContent.trim(), 'History 0')
+})
+
+test('an older session refresh cannot overwrite a later account login', async () => {
+  await render(); await goToGas(); await fillVisible()
+  let resolveOldSession
+  const nextAccount = { user: { id: 2, username: 'next-owner' }, stores: [signedIn.stores[1]], csrfToken: 'next-token' }
+  override = (call) => {
+    if (call.url === '/api/reports/' && call.method === 'POST') return json({ errors: 'Sign in to access reports.' }, 401)
+    if (call.url === '/api/auth/session/' && !resolveOldSession) return new Promise((resolve) => { resolveOldSession = resolve })
+    if (call.url === '/api/auth/session/') return json(signedOut)
+    if (call.url === '/api/auth/login/') return json(nextAccount)
+    return null
+  }
+  await click('Save report')
+  assert.ok(resolveOldSession)
+  await click('Retry setup')
+  const loginInputs = container.querySelectorAll('input')
+  for (const [index, value] of ['next-owner', 'correct password'].entries()) await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(loginInputs[index], value)
+    loginInputs[index].dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await click('Sign in')
+  await act(async () => resolveOldSession(json(signedIn))); await settle()
+  assert.ok(button('Sign out next-owner'))
+  assert.match(container.textContent, /Second store/)
+  assert.doesNotMatch(container.textContent, /Main store/)
+})
+
+test('a CSRF rejection preserves the unsaved report', async () => {
+  await render(); await goToGas(); await fillVisible(); await enter('gas_cash_sales', '50')
+  override = (call) => call.method === 'POST'
+    ? json({ errors: 'Your session token has expired. Reload the page and try again.' }, 403)
+    : null
+  await click('Save report')
+  assert.match(container.querySelector('[role=alert]').textContent, /session token has expired/)
+  assert.equal(input('gas_cash_sales').value, '50')
+  assert.equal(requests.filter((call) => call.url === '/api/auth/session/').length, 1)
+})
+
+test('ordinary missing reports do not revoke store access or discard the draft', async () => {
+  const saved = reportFromForm(completeForm({ close_label: 'Unsaved private draft' }))
+  history = [saved]
+  await render(); await click('2026-09-10day Unsaved private draft'); await click('Edit'); await goToGas()
+  override = (call) => call.method === 'PATCH' ? json({ errors: 'Report not found.' }, 404) : null
+  await click('Save changes')
+  assert.match(container.querySelector('[role=alert]').textContent, /Report not found/)
+  assert.ok(button('Save changes'))
+  assert.equal(requests.filter((call) => call.url === '/api/auth/session/').length, 1)
+})
+
 test('pending shift dates start a day close and legacy card payments remain visibly missing', async () => {
   const legacy = reportFromForm(completeForm({ close_type: 'shift', close_label: 'Morning', gas_phone_card_sales: '12.00', gas_card_payment_sales: null }))
   legacy.calculated.registers.gas_net_difference = null

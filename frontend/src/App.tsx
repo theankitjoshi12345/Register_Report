@@ -70,12 +70,25 @@ function App() {
     return () => { cancelled = true }
   }, [reload])
 
-  const expireSession = () => {
-    generation.current += 1
+  const refreshSession = (message: string, restoreStore = false) => {
+    const currentGeneration = ++generation.current
     setSession(null); setStoreId(null); setReports([]); reset(); setSaving(false)
-    setError('Your session has expired. Sign in again to continue.')
-    // Refresh the CSRF token without losing the sign-in message.
-    void request<Session>('/api/auth/session/').then(setSession).catch(() => {})
+    setError(message)
+    // A delayed session check must not replace a later login or store change.
+    void request<Session>('/api/auth/session/').then((auth) => {
+      if (generation.current !== currentGeneration) return
+      setSession(auth)
+      if (restoreStore) setStoreId(auth.stores[0]?.id ?? null)
+    }).catch(() => {})
+  }
+
+  const expireSession = () => refreshSession('Your session has expired. Sign in again to continue.')
+  const refreshStoreAccess = () => refreshSession('Your access to this store has changed. Store access has been refreshed.', true)
+  const handleAccessFailure = (failure: unknown) => {
+    if (!(failure instanceof ApiError)) return false
+    if (failure.status === 401) { expireSession(); return true }
+    if (failure.code === 'store_access_denied') { refreshStoreAccess(); return true }
+    return false
   }
 
   useEffect(() => {
@@ -90,8 +103,7 @@ function App() {
       .catch((failure) => {
         if (cancelled || generation.current !== currentGeneration) return
         setLoadedHistoryKey(historyKey)
-        if (failure instanceof ApiError && failure.status === 401) expireSession()
-        else setError(failure instanceof Error ? failure.message : 'Unable to load report history.')
+        if (!handleAccessFailure(failure)) setError(failure instanceof Error ? failure.message : 'Unable to load report history.')
       })
     return () => { cancelled = true }
   }, [userId, storeId, historyKey])
@@ -166,13 +178,13 @@ function App() {
         if (generation.current === currentGeneration) { setReports(latest.reports); setView(latest.reports.find((report) => report.id === saved.id) ?? saved) }
       } catch (failure) {
         if (generation.current !== currentGeneration) return
-        if (failure instanceof ApiError && failure.status === 401) { expireSession(); return }
+        if (handleAccessFailure(failure)) return
         setReports([])
         setNotice('Your report was saved. History could not be refreshed; retry to load the latest calculated reports.')
       }
     } catch (failure) {
       if (generation.current !== currentGeneration) return
-      if (failure instanceof ApiError && failure.status === 401) { expireSession(); return }
+      if (handleAccessFailure(failure)) return
       setError(failure instanceof Error ? failure.message : 'Unable to save this report.')
       if (failure instanceof ApiError) {
         const mappedErrors = Object.fromEntries(Object.entries(failure.errors).map(([path, message]) => {
