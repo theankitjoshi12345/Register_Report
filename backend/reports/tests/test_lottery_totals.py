@@ -104,7 +104,7 @@ class DailyReportCalculationTests(SimpleTestCase):
                 "bodega_phone_card_sales": "20.00",
                 "bodega_gas_sales": "100.00",
                 "gas_cash_sales": "500.00",
-                "gas_lottery_sales": "80.00",
+                "gas_lottery_sales": "120.00",
                 "gas_lottery_payout": "15.00",
                 "gas_phone_card_sales": "40.00",
                 "gas_card_payment_sales": "40.00",
@@ -117,6 +117,8 @@ class DailyReportCalculationTests(SimpleTestCase):
 
         self.assertEqual(result["comparisons"]["phone_card_sales"]["status"], "match")
         self.assertEqual(result["comparisons"]["lottery_sales"]["status"], "match")
+        self.assertEqual(result["comparisons"]["lottery_sales"]["expected"], Decimal("140.00"))
+        self.assertEqual(result["comparisons"]["lottery_sales"]["actual"], Decimal("140.00"))
         self.assertEqual(result["comparisons"]["lottery_payout"]["status"], "match")
         self.assertEqual(result["registers"]["gas_net_difference"], Decimal("255.00"))
 

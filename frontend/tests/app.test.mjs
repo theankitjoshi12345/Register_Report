@@ -166,6 +166,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   for (const label of ['Bodega AI tickets', 'Verifone tickets', 'Verifone vendor payouts', 'Verifone safe drops']) assert.match(container.textContent, new RegExp(label))
   assert.match(container.textContent, /Customer tab/); assert.match(container.textContent, /Bread delivery/); assert.match(container.textContent, /Evening deposit/)
   assert.match(container.textContent, /Starting number/); assert.match(container.textContent, /Value generated/)
+  assert.match(container.textContent, /Lottery sales \(scratch-offs \+ terminal\)/)
   assert.match(container.textContent, /003/); assert.match(container.textContent, /004/); assert.match(container.textContent, /\$5.00/)
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.equal(save.headers['X-CSRFToken'], 'signed-in-token'); assert.equal(save.headers['X-Store-ID'], '1')

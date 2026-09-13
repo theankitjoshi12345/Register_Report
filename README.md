@@ -159,7 +159,8 @@ new rolls, and value generated.
 | Comparison | Expected | Recorded by the registers |
 | --- | --- | --- |
 | Phone-card sales | Independent phone-card machine sales | Bodega phone-card sales + Verifone phone-card sales |
-| Shift lottery sales | Current cumulative terminal sales − previous cumulative terminal sales | Bodega lottery sales + Verifone lottery sales |
+| Shift lottery sales | Scratch-off value generated during the shift + (current cumulative terminal sales − previous cumulative terminal sales) | Bodega lottery sales + Verifone lottery sales |
+| Daily lottery sales | Total scratch-off value generated that day + final cumulative terminal sales | Combined Bodega lottery sales + combined Verifone lottery sales |
 | Shift lottery payouts | Current cumulative terminal payout − previous cumulative terminal payout | Bodega lottery payout + Verifone lottery payout |
 
 Difference = recorded − expected. Exactly zero is a match. Django validates

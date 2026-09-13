@@ -65,7 +65,7 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
         <h2 className="text-xl font-bold">Reconciliation</h2>
         <div><table className="mt-3 block w-full text-sm sm:table sm:min-w-[520px]">
           <thead className="hidden sm:table-header-group"><tr className="text-left text-xs uppercase text-slate-500"><th className="py-2">Comparison</th><th className="px-3">Terminal / machine</th><th className="px-3">Registers</th><th className="pl-3">Difference</th></tr></thead>
-          <tbody className="grid gap-3 sm:table-row-group"><ComparisonRow label="Phone card sales" value={calculated.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales" value={calculated.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={calculated.comparisons.lottery_payout} /></tbody>
+          <tbody className="grid gap-3 sm:table-row-group"><ComparisonRow label="Phone card sales" value={calculated.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales (scratch-offs + terminal)" value={calculated.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={calculated.comparisons.lottery_payout} /></tbody>
         </table></div>
       </section>
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">

@@ -4,7 +4,8 @@
 
 - React/TypeScript/Tailwind form with five validated steps.
 - Shift closes, automatic daily summaries, report history, and editable saved reports.
-- Independent lottery/phone-card comparisons and Verifone cash reconciliation.
+- Lottery comparisons using scratch-off value plus terminal sales, independent
+  phone-card comparisons, and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Positive-only Bodega AI ticket adjustments with raw net-difference retention

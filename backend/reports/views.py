@@ -449,7 +449,9 @@ def _daily_summaries(history):
                 },
                 "comparisons": {
                     "phone_card_sales": _summary_comparison(inputs["phone_card_actual_sales"], phone_register),
-                    "lottery_sales": _summary_comparison(terminal_sales, register_sales),
+                    "lottery_sales": _summary_comparison(
+                        scratch_sales + terminal_sales, register_sales,
+                    ),
                     "lottery_payout": _summary_comparison(terminal_payout, register_payout),
                 },
             })

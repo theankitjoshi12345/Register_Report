@@ -60,7 +60,7 @@ export default function DailySummaryView({ summary, onOpenShift, onNewShift }: {
         <h2 className="text-xl font-bold">Reconciliation</h2>
         <div><table className="mt-3 block w-full text-sm sm:table sm:min-w-[520px]">
           <thead className="hidden sm:table-header-group"><tr className="text-left text-xs uppercase text-slate-500"><th className="py-2">Comparison</th><th className="px-3">Terminal / machine</th><th className="px-3">Registers</th><th className="pl-3">Difference</th></tr></thead>
-          <tbody className="grid gap-3 sm:table-row-group"><ComparisonRow label="Phone card sales" value={summary.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales" value={summary.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={summary.comparisons.lottery_payout} /></tbody>
+          <tbody className="grid gap-3 sm:table-row-group"><ComparisonRow label="Phone card sales" value={summary.comparisons.phone_card_sales} /><ComparisonRow label="Lottery sales (scratch-offs + terminal)" value={summary.comparisons.lottery_sales} /><ComparisonRow label="Lottery payout" value={summary.comparisons.lottery_payout} /></tbody>
         </table></div>
       </section>
 

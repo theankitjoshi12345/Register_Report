@@ -243,7 +243,9 @@ def calculate_daily_report(
         "comparisons": {
             "phone_card_sales": comparison(values["phone_card_actual_sales"], pos_phone_cards),
             "lottery_sales": comparison(
-                scratch_sales + values["lottery_terminal_sales"] if legacy_day else shift_terminal_sales,
+                scratch_sales + (
+                    values["lottery_terminal_sales"] if legacy_day else shift_terminal_sales
+                ),
                 pos_lottery_sales,
             ),
             "lottery_payout": comparison(

@@ -222,6 +222,32 @@ class ReportHistoryTests(TestCase):
             str(slot.slot_number): 1 for slot in SCRATCH_OFF_SLOTS
         })
 
+    def test_shift_and_daily_lottery_sales_include_scratch_offs_and_terminal_sales(self):
+        self.create("2026-09-09", readings=[reading(5)])
+        first = self.create(
+            readings=[reading(10)], lottery_terminal_sales="100",
+            bodega_lottery_sales="100", gas_lottery_sales="100",
+        )
+        second = self.create(
+            readings=[reading(15)], lottery_terminal_sales="250",
+            bodega_lottery_sales="125", gas_lottery_sales="125",
+        )
+
+        self.assertEqual(first["calculated"]["scratch_off"]["sales"], "100.00")
+        self.assertEqual(first["calculated"]["comparisons"]["lottery_sales"], {
+            "expected": "200.00", "actual": "200.00", "difference": "0.00", "status": "match",
+        })
+        self.assertEqual(second["calculated"]["terminal"]["shift_sales"], "150.00")
+        self.assertEqual(second["calculated"]["scratch_off"]["sales"], "100.00")
+        self.assertEqual(second["calculated"]["comparisons"]["lottery_sales"]["expected"], "250.00")
+
+        summary = self.client.get("/api/reports/").json()["daily_summaries"][0]
+        self.assertEqual(summary["terminal"]["final_cumulative_sales"], "250.00")
+        self.assertEqual(summary["scratch_off"]["sales"], "200.00")
+        self.assertEqual(summary["comparisons"]["lottery_sales"], {
+            "expected": "450.00", "actual": "450.00", "difference": "0.00", "status": "match",
+        })
+
     def test_cumulative_terminal_readings_are_derived_per_shift_and_summarized(self):
         first = self.create(
             lottery_terminal_sales="500", lottery_terminal_payout="100",

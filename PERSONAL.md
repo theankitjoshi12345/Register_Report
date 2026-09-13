@@ -189,9 +189,13 @@ All of these items must be organized into steps:
 
 For phone cards, the backend will check the difference described above. It will
 also derive the current shift's terminal sales and payout before comparing them
-with the shift register values. For Bodega AI, it stores the entered net
-difference unchanged, adds the optional Bodega AI ticket total, and presents the
-result as Register Balance in shift history and daily summaries.
+with the shift register values. Lottery sales compare the scratch-off value
+generated plus the derived terminal lottery sales against the combined Bodega AI
+and Verifone lottery sales. The automatic daily report uses total daily
+scratch-off sales plus the final cumulative terminal sales. For Bodega AI, it
+stores the entered net difference unchanged, adds the optional Bodega AI ticket
+total, and presents the result as Register Balance in shift history and daily
+summaries.
 
 For Verifone, it will calculate:
 
