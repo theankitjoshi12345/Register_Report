@@ -2,6 +2,7 @@ import { Check, CircleAlert, Pencil, Plus, WalletCards } from 'lucide-react'
 import { buttonClass, primaryClass } from './FormFields'
 import { fields, formFromReport, itemGroups, money } from './report'
 import type { Comparison, Report } from './report'
+import VerifoneBalance from './RegisterBalance'
 
 function ComparisonRow({ label, value }: { label: string; value: Comparison }) {
   return (
@@ -41,7 +42,7 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
           <h2 className="text-sm text-slate-300">Register balance</h2>
           <dl className="mt-5 grid gap-4 min-[360px]:grid-cols-2">
             <div className="min-w-0"><dt className="text-sm text-slate-400">Bodega AI Register Balance</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(calculated.registers.bodega_ai_register_balance ?? calculated.registers.bodega_net_difference)}</dd></div>
-            <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(calculated.registers.gas_net_difference)}</dd></div>
+            <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone Register Balance</dt><dd className="break-words"><VerifoneBalance value={calculated.registers.gas_net_difference} large /></dd></div>
           </dl>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5">

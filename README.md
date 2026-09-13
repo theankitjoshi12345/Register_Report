@@ -180,6 +180,11 @@ Verifone total cash sales
 − Card payment without including fee
 ```
 
+The signed backend result remains in `gas_net_difference`. In the UI, a positive
+result is **Over by** its absolute amount, a negative result is **Short by** its
+absolute amount, and zero is **Balanced**. The UI does not reverse the sign or
+change this calculation.
+
 **Phone cards and debit/credit payments are separate entries.** The old internal
 `gas_card_sales` field represented Verifone phone-card sales despite its label.
 Its saved values are preserved under `gas_phone_card_sales`. The new

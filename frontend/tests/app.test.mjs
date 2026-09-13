@@ -25,7 +25,7 @@ globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0)
 const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
-const { initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const { initialForm, fields, itemGroups, localDate, verifoneBalanceStatus } = await import(pathToFileURL(path.join(output, 'report.mjs')))
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
@@ -65,6 +65,10 @@ function summaryFromReports(reports) {
   const shifts = reports.filter((report) => report.close_type === 'shift')
   if (!shifts.length) return []
   const latest = shifts.at(-1)
+  const gasBalances = shifts.map((report) => report.calculated.registers.gas_net_difference)
+  const gasBalance = gasBalances.some((value) => value == null)
+    ? null
+    : gasBalances.reduce((total, value) => total + Number(value), 0).toFixed(2)
   return [{
     report_date: latest.report_date, shift_count: shifts.length,
     shifts: shifts.map((report) => ({ id: report.id, close_label: report.close_label, created_at: report.created_at, terminal_sales: report.calculated.terminal.shift_sales, terminal_payout: report.calculated.terminal.shift_payout, scratch_off_sales: report.calculated.scratch_off.sales })),
@@ -72,7 +76,7 @@ function summaryFromReports(reports) {
     scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {}, slots: latest.calculated.scratch_off.slots ?? {} },
     inputs: Object.fromEntries(fields.map(([key]) => [key, latest.calculated.inputs[key]])),
     line_items: Object.fromEntries(itemGroups.map(({ key }) => [key, { total: '0.00', entries: [] }])),
-    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', bodega_ai_ticket_total: '0.00', bodega_ai_register_balance: '0.00', gas_net_difference: '20.00' },
+    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', bodega_ai_ticket_total: '0.00', bodega_ai_register_balance: '0.00', gas_net_difference: gasBalance },
     comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
   }]
 }
@@ -217,6 +221,22 @@ test('Bodega AI tickets are optional, positive-only, and adjust Register Balance
   await click('Edit'); await click('Continue'); await click('Continue'); await click('Continue')
   assert.equal(input('bodega_ai_tickets.0.amount').value, '10')
   assert.equal(input('bodega_ai_tickets.0.description').value, 'Customer ticket')
+})
+
+test('Verifone Register Balance preserves its sign and displays Over, Short, and Balanced', async () => {
+  assert.deepEqual(verifoneBalanceStatus('20.00'), { status: 'Over', amount: '$20.00', text: 'Over by $20.00' })
+  assert.deepEqual(verifoneBalanceStatus('-20.00'), { status: 'Short', amount: '$20.00', text: 'Short by $20.00' })
+  assert.deepEqual(verifoneBalanceStatus('0.00'), { status: 'Balanced', amount: null, text: 'Balanced' })
+
+  const report = reportFromForm(completeForm({ close_label: 'Short register' }))
+  report.calculated.registers.gas_net_difference = '-20.00'
+  history = [report]
+  await render()
+  await click('2026-09-10Shift Short register')
+  assert.ok(container.querySelector('[aria-label="Short by $20.00"]'))
+  assert.equal(report.calculated.registers.gas_net_difference, '-20.00')
+  await click('2026-09-10Daily summary · 1 shift')
+  assert.ok(container.querySelectorAll('[aria-label="Short by $20.00"]').length >= 2)
 })
 
 test('Enter on an earlier step advances without creating a report', async () => {

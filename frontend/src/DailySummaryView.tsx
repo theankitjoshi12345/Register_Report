@@ -2,6 +2,7 @@ import { ArrowRight, Check, CircleAlert, Plus, WalletCards } from 'lucide-react'
 import { buttonClass, primaryClass } from './FormFields'
 import { fields, itemGroups, money } from './report'
 import type { AmountKey, Comparison, DailySummary } from './report'
+import VerifoneBalance from './RegisterBalance'
 
 function ComparisonRow({ label, value }: { label: string; value: Comparison }) {
   return (
@@ -47,7 +48,7 @@ export default function DailySummaryView({ summary, onOpenShift, onNewShift }: {
           <h2 className="text-sm text-slate-300">Register balance</h2>
           <dl className="mt-5 grid gap-4 min-[360px]:grid-cols-2">
             <div className="min-w-0"><dt className="text-sm text-slate-400">Bodega AI Register Balance</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(summary.registers.bodega_ai_register_balance)}</dd></div>
-            <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(summary.registers.gas_net_difference)}</dd></div>
+            <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone Register Balance</dt><dd className="break-words"><VerifoneBalance value={summary.registers.gas_net_difference} large /></dd></div>
           </dl>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -73,7 +74,7 @@ export default function DailySummaryView({ summary, onOpenShift, onNewShift }: {
           {fields.map(([key, label]) => <div className="min-w-0" key={key}><dt className="text-xs text-slate-500">{key === 'bodega_net_difference' ? 'Bodega net difference (entered)' : label.replace('Current cumulative ', 'Final cumulative ')}</dt><dd className="break-words font-semibold">{money(figureValue(key))}</dd></div>)}
           <div className="min-w-0"><dt className="text-xs text-slate-500">Total Bodega AI ticket amount</dt><dd className="break-words font-semibold">{money(summary.registers.bodega_ai_ticket_total)}</dd></div>
           <div className="min-w-0"><dt className="text-xs text-slate-500">Register Balance</dt><dd className="break-words font-semibold">{money(summary.registers.bodega_ai_register_balance)}</dd></div>
-          <div className="min-w-0"><dt className="text-xs text-slate-500">Verifone net difference</dt><dd className="break-words font-semibold">{money(summary.registers.gas_net_difference)}</dd></div>
+          <div className="min-w-0"><dt className="text-xs text-slate-500">Verifone Register Balance</dt><dd className="break-words"><VerifoneBalance value={summary.registers.gas_net_difference} /></dd></div>
         </dl>
 
         <div className="mt-7 grid gap-5 md:grid-cols-3">{itemGroups.map(({ key, title }) => {

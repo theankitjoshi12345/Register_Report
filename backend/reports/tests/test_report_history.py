@@ -35,6 +35,14 @@ class ReportInputTests(SimpleTestCase):
         self.assertEqual(calculated["registers"]["gas_net_difference"], Decimal("20.00"))
         self.assertEqual(calculated["registers"]["bodega_net_difference"], Decimal("-1.25"))
 
+    def test_verifone_raw_balance_sign_is_preserved(self):
+        for cash_sales, expected in (("120.00", "20.00"), ("80.00", "-20.00"), ("100.00", "0.00")):
+            with self.subTest(cash_sales=cash_sales):
+                calculated = calculate_daily_report(report_payload(
+                    gas_cash_sales=cash_sales, gas_card_payment_sales="100.00",
+                ))
+                self.assertEqual(calculated["registers"]["gas_net_difference"], Decimal(expected))
+
     def test_every_money_field_enforces_precision_type_and_database_size(self):
         for field in MONEY_FIELDS:
             for invalid in (None, "", " ", True, [], {}, "NaN", "Infinity", "1.001", "10000000000", "1e999999", "1e999999999", "-1e999999999"):

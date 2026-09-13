@@ -209,13 +209,16 @@ Total cash sales
 ```
 
 This provides Verifone's net difference, which can be positive or
-negative.
+negative. The raw signed value remains unchanged in `gas_net_difference`. The
+frontend presents a positive value as **Over by**, a negative value as **Short
+by**, and zero as **Balanced**, using the absolute amount only for the displayed
+status message.
 
 The backend should provide these values in a table:
 
 ```text
 Bodega AI [Register Balance: ]
-Verifone [Net Difference: ]
+Verifone [Register Balance: Over by / Short by / Balanced]
 
 Phone card [Expected: , Actual: ]
 Lottery sales [Expected: , Actual: ]

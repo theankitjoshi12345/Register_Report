@@ -7,6 +7,8 @@
 - Lottery comparisons using scratch-off value plus terminal sales, independent
   phone-card comparisons, and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
+- Consistent Verifone Register Balance status: positive is Over, negative is
+  Short, and zero is Balanced while preserving the raw signed backend value.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Positive-only Bodega AI ticket adjustments with raw net-difference retention
   and an adjusted Register Balance in shift history and daily summaries.
