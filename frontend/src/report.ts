@@ -75,6 +75,10 @@ export type DailySummary = {
   scratch_off: {
     sales: string; total_new_rolls: number; new_rolls_by_slot: Record<string, number>
     final_state: Record<string, { ending_number: number | null; ending_exhausted: boolean }>
+    slots: Record<string, {
+      tickets_sold: number; ticket_price: string; sales: string; new_roll_count: number
+      starting_number: number | null; ending_number: number | null; ending_exhausted: boolean
+    }>
   }
   inputs: Partial<Record<AmountKey, string | null>>
   line_items: Record<ItemKey, { total: string; entries: { report_id: number; shift_name: string; amount: string; description: string }[] }>

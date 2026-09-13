@@ -228,7 +228,9 @@ business date that has shifts. It includes all shifts, summed scratch-off sales
 and new rolls, final scratch-off state, combined register values and line items,
 the final cumulative terminal readings, and day-end sales, payout, and phone-card
 comparisons. Editing an earlier shift recalculates every later shift and the
-daily summary atomically.
+daily summary atomically. The automatic daily summary uses the same report layout
+as a legacy day close, including register balances, reconciliation, entered
+figures, separate line-item sections, and per-slot scratch-off results.
 
 ## UI
 

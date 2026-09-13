@@ -344,9 +344,26 @@ def _daily_summaries(history):
     for report_date, reports_for_date in groupby(history, key=lambda item: item.report_date):
         date_reports = list(reports_for_date)
         shifts = [item for item in date_reports if item.close_type == DailyReport.SHIFT]
+        summary_slots = {}
         for report in shifts:
             for slot, result in report.calculated_report.get("scratch_off", {}).get("slots", {}).items():
-                scratch_state[str(slot)] = {
+                slot = str(slot)
+                if slot not in summary_slots:
+                    summary_slots[slot] = {
+                        "tickets_sold": 0,
+                        "ticket_price": result.get("ticket_price"),
+                        "sales": Decimal("0.00"),
+                        "new_roll_count": 0,
+                        "starting_number": result.get("starting_number"),
+                        "ending_number": result.get("ending_number"),
+                        "ending_exhausted": result.get("ending_exhausted", False),
+                    }
+                summary_slots[slot]["tickets_sold"] += result.get("tickets_sold", 0)
+                summary_slots[slot]["sales"] += Decimal(str(result.get("sales", "0.00")))
+                summary_slots[slot]["new_roll_count"] += result.get("new_roll_count", 0)
+                summary_slots[slot]["ending_number"] = result.get("ending_number")
+                summary_slots[slot]["ending_exhausted"] = result.get("ending_exhausted", False)
+                scratch_state[slot] = {
                     "ending_number": result.get("ending_number"),
                     "ending_exhausted": result.get("ending_exhausted", False),
                 }
@@ -359,11 +376,9 @@ def _daily_summaries(history):
                 (Decimal(str(report.calculated_report["scratch_off"]["sales"])) for report in shifts),
                 Decimal("0.00"),
             )
-            new_rolls_by_slot = {}
-            for report in shifts:
-                for reading in report.scratch_offs:
-                    slot = str(reading["slot_number"])
-                    new_rolls_by_slot[slot] = new_rolls_by_slot.get(slot, 0) + reading["new_roll_count"]
+            new_rolls_by_slot = {
+                slot: result["new_roll_count"] for slot, result in summary_slots.items()
+            }
             line_items = {}
             for item_type, key in LINE_ITEM_FIELDS:
                 entries = [
@@ -416,6 +431,7 @@ def _daily_summaries(history):
                     "total_new_rolls": sum(new_rolls_by_slot.values()),
                     "new_rolls_by_slot": new_rolls_by_slot,
                     "final_state": deepcopy(scratch_state),
+                    "slots": summary_slots,
                 },
                 "inputs": inputs,
                 "line_items": line_items,

@@ -196,6 +196,15 @@ class ReportHistoryTests(TestCase):
         self.assertEqual(self.sales(second), "80.00")
         self.assertEqual(summary["scratch_off"]["sales"], "480.00")
         self.assertTrue(summary["scratch_off"]["final_state"]["1"]["ending_exhausted"])
+        self.assertEqual(summary["scratch_off"]["slots"]["1"], {
+            "tickets_sold": 24,
+            "ticket_price": "20.00",
+            "sales": "480.00",
+            "new_roll_count": 0,
+            "starting_number": 0,
+            "ending_number": None,
+            "ending_exhausted": True,
+        })
         tomorrow = self.create("2026-09-11", readings=[reading(None)])
         self.assertEqual(self.sales(tomorrow), "0.00")
 

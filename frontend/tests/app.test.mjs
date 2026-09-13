@@ -69,7 +69,7 @@ function summaryFromReports(reports) {
     report_date: latest.report_date, shift_count: shifts.length,
     shifts: shifts.map((report) => ({ id: report.id, close_label: report.close_label, created_at: report.created_at, terminal_sales: report.calculated.terminal.shift_sales, terminal_payout: report.calculated.terminal.shift_payout, scratch_off_sales: report.calculated.scratch_off.sales })),
     terminal: { final_cumulative_sales: latest.calculated.terminal.cumulative_sales, final_cumulative_payout: latest.calculated.terminal.cumulative_payout },
-    scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {} },
+    scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {}, slots: latest.calculated.scratch_off.slots ?? {} },
     inputs: Object.fromEntries(fields.map(([key]) => [key, latest.calculated.inputs[key]])),
     line_items: Object.fromEntries(itemGroups.map(({ key }) => [key, { total: '0.00', entries: [] }])),
     registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', bodega_ai_ticket_total: '0.00', bodega_ai_register_balance: '0.00', gas_net_difference: '20.00' },
@@ -377,8 +377,13 @@ test('daily summaries are automatic and shift history still shows legacy missing
   history = [legacy]
   await render()
   await click('2026-09-10Daily summary · 1 shift')
-  assert.match(container.textContent, /Automatic day end/)
+  assert.match(container.textContent, /Automatic day close/)
+  assert.match(container.textContent, /Daily report for 2026-09-10/)
   assert.match(container.textContent, /Calculated from 1 shift/)
+  assert.match(container.textContent, /Register balance/)
+  assert.match(container.textContent, /Reconciliation/)
+  assert.match(container.textContent, /Entered figures/)
+  assert.match(container.textContent, /Scratch-off entries/)
   await click('MorningTerminal sales $0.00 · Scratch-offs $15.00')
   assert.match(container.textContent, /older report needs its card payment amount/)
   assert.match(container.textContent, /Needs entry/)

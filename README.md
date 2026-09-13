@@ -149,6 +149,11 @@ and terminal results for that store. If a correction makes a later counter or
 cumulative reading invalid, the save identifies the conflicting report and the
 transaction leaves the history unchanged.
 
+Automatic daily summaries use the same report layout as legacy day closes. They
+show register balances, reconciliation, combined entered figures, separate line
+items, and each scratch-off slot's daily starting number, final ending number,
+new rolls, and value generated.
+
 ## Calculation rules
 
 | Comparison | Expected | Recorded by the registers |

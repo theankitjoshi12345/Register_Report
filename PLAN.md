@@ -16,6 +16,8 @@
 - Legacy per-shift terminal inputs preserved in place and translated during replay.
 - Automatic daily summaries using the final terminal readings and combined shift
   register, scratch-off, phone-card, new-roll, and line-item totals.
+- Legacy-style daily summary presentation with register cards, reconciliation,
+  entered figures, separate line items, and per-slot scratch-off results.
 - Recalculation of later reports following corrections/backdated entries, with
   atomic rollback for inconsistent history.
 - Normalized line items and scratch-off rows alongside calculation snapshots.
