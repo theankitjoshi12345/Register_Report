@@ -154,7 +154,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await fillVisible(); await enter('Bodega net difference sign', '-'); await enter('bodega_net_difference', '3.25'); await click('Continue')
   assert.match(currentStep(), /Verifone/)
   await fillVisible(); await enter('gas_phone_card_sales', '17.25'); await enter('gas_card_payment_sales', '98.50')
-  for (const [title, key, amount, description] of [['tickets', 'tickets', '12.50', 'Customer tab'], ['vendor payouts', 'vendor_payouts', '7.00', 'Bread delivery'], ['safe drops', 'safe_drops', '100.00', 'Evening deposit']]) {
+  for (const [title, key, amount, description] of [['verifone tickets', 'tickets', '12.50', 'Customer tab'], ['verifone vendor payouts', 'vendor_payouts', '7.00', 'Bread delivery'], ['verifone safe drops', 'safe_drops', '100.00', 'Evening deposit']]) {
     await click(`Add ${title} amount`); await enter(`${key}.0.amount`, amount); await enter(`${key}.0.description`, description)
   }
   await click('Save report')
@@ -163,6 +163,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
     assert.match(container.textContent, new RegExp(label))
   }
   assert.doesNotMatch(container.textContent, /Gas (?:total cash|lottery|phone card)|Gas register/)
+  for (const label of ['Bodega AI tickets', 'Verifone tickets', 'Verifone vendor payouts', 'Verifone safe drops']) assert.match(container.textContent, new RegExp(label))
   assert.match(container.textContent, /Customer tab/); assert.match(container.textContent, /Bread delivery/); assert.match(container.textContent, /Evening deposit/)
   assert.match(container.textContent, /Starting number/); assert.match(container.textContent, /Value generated/)
   assert.match(container.textContent, /003/); assert.match(container.textContent, /004/); assert.match(container.textContent, /\$5.00/)
@@ -176,7 +177,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await click('Continue'); assert.equal(input('phone_card_actual_sales').value, '17.25')
   await click('Continue'); assert.equal(input('scratch_offs.0.ending_number').value, '4'); assert.equal(input('scratch_offs.1.new_roll_count').value, '2')
   await click('Continue'); assert.equal(input('Bodega net difference sign').value, '-'); assert.equal(input('bodega_net_difference').value, '3.25')
-  await click('Continue'); assert.equal(input('tickets.0.description').value, 'Customer tab'); assert.equal(input('Tickets amount 1 sign').value, '+'); assert.equal(input('tickets.0.amount').value, '12.50'); assert.equal(input('gas_card_payment_sales').value, '98.50')
+  await click('Continue'); assert.equal(input('tickets.0.description').value, 'Customer tab'); assert.equal(input('Verifone tickets amount 1 sign').value, '+'); assert.equal(input('tickets.0.amount').value, '12.50'); assert.equal(input('gas_card_payment_sales').value, '98.50')
   override = (call) => { if (call.method === 'PATCH') later.calculated.registers.gas_net_difference = '777.00' }
   await click('Save changes')
   assert.equal(requests.filter((call) => call.url === '/api/reports/' && call.method === 'GET').length, 3)
@@ -185,10 +186,10 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
 
 test('sign selectors support negative amounts without a minus key', async () => {
   await render(); await goToGas(); await fillVisible()
-  await click('Add tickets amount')
+  await click('Add verifone tickets amount')
   assert.match(container.textContent, /Choose \+ when a ticket is created for the customer and − when the customer pays the ticket/)
   assert.doesNotMatch(container.textContent, /Phone card sales are prepaid phone cards/)
-  await enter('Tickets amount 1 sign', '-'); await enter('tickets.0.amount', '8.25')
+  await enter('Verifone tickets amount 1 sign', '-'); await enter('tickets.0.amount', '8.25')
   await click('Save report')
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.equal(save.body.tickets[0].amount, '-8.25')
@@ -226,7 +227,7 @@ test('Enter on an earlier step advances without creating a report', async () => 
 
 test('nested server field errors return to the relevant step and retain entered data', async () => {
   await render(); await goToGas(); await fillVisible()
-  await click('Add tickets amount'); await enter('tickets.0.amount', '2'); await enter('tickets.0.description', 'Keep this')
+  await click('Add verifone tickets amount'); await enter('tickets.0.amount', '2'); await enter('tickets.0.description', 'Keep this')
   override = (call) => call.method === 'POST' ? json({ errors: { scratch_offs: [{ ending_number: ['Ending counter is before the prior reading.'] }], tickets: [{ amount: ['Check this amount.'] }] } }, 400) : null
   await click('Save report')
   assert.match(currentStep(), /Scratch-off count/)

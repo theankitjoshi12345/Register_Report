@@ -153,11 +153,11 @@ All of these items must be organized into steps:
 ### Verifone
 
 - Total cash sales
-- Safe drops
-- Tickets
+- Verifone safe drops
+- Verifone tickets
 - Lottery sales
 - Lottery payout
-- Vendor payouts
+- Verifone vendor payouts
 - Card payment without including fee
 
 ## Clarifications

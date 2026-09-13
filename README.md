@@ -173,9 +173,9 @@ difference is:
 ```text
 Verifone total cash sales
 − Gas sold through Bodega
-− Safe drops
-− Tickets
-− Vendor payouts
+− Verifone safe drops
+− Verifone tickets
+− Verifone vendor payouts
 − Card payment without including fee
 ```
 

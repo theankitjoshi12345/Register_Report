@@ -31,9 +31,9 @@ export type AmountKey = typeof fields[number][0]
 export type ItemKey = 'bodega_ai_tickets' | 'tickets' | 'vendor_payouts' | 'safe_drops'
 export const bodegaAiTicketGroup = { key: 'bodega_ai_tickets', title: 'Bodega AI tickets', type: 'bodega_ai_ticket' } as const
 export const verifoneItemGroups: { key: ItemKey; title: string; type: string }[] = [
-  { key: 'tickets', title: 'Tickets', type: 'ticket' },
-  { key: 'vendor_payouts', title: 'Vendor payouts', type: 'vendor_payout' },
-  { key: 'safe_drops', title: 'Safe drops', type: 'safe_drop' },
+  { key: 'tickets', title: 'Verifone tickets', type: 'ticket' },
+  { key: 'vendor_payouts', title: 'Verifone vendor payouts', type: 'vendor_payout' },
+  { key: 'safe_drops', title: 'Verifone safe drops', type: 'safe_drop' },
 ]
 export const itemGroups: { key: ItemKey; title: string; type: string }[] = [bodegaAiTicketGroup, ...verifoneItemGroups]
 export type FormState = Record<AmountKey, string> & {
