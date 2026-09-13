@@ -106,24 +106,11 @@ export const initialForm = (): FormState => ({
 })
 export const money = (value: string | null | undefined) => value == null ? 'Needs entry' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
 
-export type VerifoneBalanceStatus = {
-  status: 'Over' | 'Short' | 'Balanced' | 'Needs entry'
-  amount: string | null
-  text: string
-}
-
-export function verifoneBalanceStatus(value: string | null): VerifoneBalanceStatus {
-  if (value == null) return { status: 'Needs entry', amount: null, text: 'Needs entry' }
-  const numericValue = Number(value)
-  if (numericValue > 0) {
-    const amount = money(String(Math.abs(numericValue)))
-    return { status: 'Over', amount, text: `Over by ${amount}` }
-  }
-  if (numericValue < 0) {
-    const amount = money(String(Math.abs(numericValue)))
-    return { status: 'Short', amount, text: `Short by ${amount}` }
-  }
-  return { status: 'Balanced', amount: null, text: 'Balanced' }
+export function displayedVerifoneBalance(value: string | null): string {
+  if (value == null) return 'Needs entry'
+  const displayedValue = -Number(value)
+  if (displayedValue > 0) return `+${money(String(displayedValue))}`
+  return money(String(displayedValue))
 }
 
 export function formFromReport(report: Report): FormState {

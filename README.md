@@ -180,10 +180,11 @@ Verifone total cash sales
 − Card payment without including fee
 ```
 
-The signed backend result remains in `gas_net_difference`. In the UI, a positive
-result is **Over by** its absolute amount, a negative result is **Short by** its
-absolute amount, and zero is **Balanced**. The UI does not reverse the sign or
-change this calculation.
+The signed backend result remains unchanged in `gas_net_difference`. The UI
+displays its negative as a signed currency value because `+` means over and `-`
+means short to the store: backend `20.00` displays as `-$20.00`, backend
+`-20.00` displays as `+$20.00`, and zero displays as `$0.00`. This display-only
+conversion does not change the backend calculation or stored value.
 
 **Phone cards and debit/credit payments are separate entries.** The old internal
 `gas_card_sales` field represented Verifone phone-card sales despite its label.

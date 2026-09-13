@@ -25,7 +25,7 @@ globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0)
 const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
-const { initialForm, fields, itemGroups, localDate, verifoneBalanceStatus } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const { displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
@@ -223,20 +223,21 @@ test('Bodega AI tickets are optional, positive-only, and adjust Register Balance
   assert.equal(input('bodega_ai_tickets.0.description').value, 'Customer ticket')
 })
 
-test('Verifone Register Balance preserves its sign and displays Over, Short, and Balanced', async () => {
-  assert.deepEqual(verifoneBalanceStatus('20.00'), { status: 'Over', amount: '$20.00', text: 'Over by $20.00' })
-  assert.deepEqual(verifoneBalanceStatus('-20.00'), { status: 'Short', amount: '$20.00', text: 'Short by $20.00' })
-  assert.deepEqual(verifoneBalanceStatus('0.00'), { status: 'Balanced', amount: null, text: 'Balanced' })
+test('Verifone Register Balance flips only its displayed currency sign', async () => {
+  assert.equal(displayedVerifoneBalance('20.00'), '-$20.00')
+  assert.equal(displayedVerifoneBalance('-20.00'), '+$20.00')
+  assert.equal(displayedVerifoneBalance('0.00'), '$0.00')
 
-  const report = reportFromForm(completeForm({ close_label: 'Short register' }))
+  const report = reportFromForm(completeForm({ close_label: 'Signed register' }))
   report.calculated.registers.gas_net_difference = '-20.00'
   history = [report]
   await render()
-  await click('2026-09-10Shift Short register')
-  assert.ok(container.querySelector('[aria-label="Short by $20.00"]'))
+  await click('2026-09-10Shift Signed register')
+  assert.ok(container.querySelector('[aria-label="+$20.00"]'))
   assert.equal(report.calculated.registers.gas_net_difference, '-20.00')
   await click('2026-09-10Daily summary · 1 shift')
-  assert.ok(container.querySelectorAll('[aria-label="Short by $20.00"]').length >= 2)
+  assert.ok(container.querySelectorAll('[aria-label="+$20.00"]').length >= 2)
+  assert.doesNotMatch(container.textContent, /Short by|Over by|Balanced/)
 })
 
 test('Enter on an earlier step advances without creating a report', async () => {
