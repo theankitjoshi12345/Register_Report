@@ -6,7 +6,7 @@ import { Amount, buttonClass, FieldError, inputClass, Items, primaryClass, Scrat
 import Header from './Header'
 import DailySummaryView from './DailySummaryView'
 import ReportView from './ReportView'
-import { bodegaFields, errorStep, gasFields, independentFields, initialForm, itemGroups, formFromReport, steps } from './report'
+import { bodegaAiTicketGroup, bodegaFields, errorStep, gasFields, independentFields, initialForm, verifoneItemGroups, formFromReport, steps } from './report'
 import type { AmountKey, CatalogSlot, DailySummary, FieldErrors, FormState, Report, Session } from './report'
 
 function Login({ onLogin, busy }: { onLogin: (username: string, password: string) => void; busy: boolean }) {
@@ -226,8 +226,8 @@ function App() {
                     </div>}
                     {step === 1 && <div className="space-y-5"><p className="text-sm leading-6 text-slate-600">Enter what the lottery terminal currently displays. Do not subtract earlier shifts; the system calculates this shift's sales and payout from the cumulative readings.</p>{amountGroup(independentFields)}</div>}
                     {step === 2 && <ScratchFields form={form} catalog={catalog} errors={errors} onChange={(value) => update('scratch_offs', value)} />}
-                    {step === 3 && amountGroup(bodegaFields)}
-                    {step === 4 && <div className="space-y-6">{amountGroup(gasFields)}{itemGroups.map(({ key, title }) => <Items key={key} name={key} title={title} values={form[key]} onChange={(value) => update(key, value)} errors={errors} />)}</div>}
+                    {step === 3 && <div className="space-y-6">{amountGroup(bodegaFields)}<Items name={bodegaAiTicketGroup.key} title={bodegaAiTicketGroup.title} values={form.bodega_ai_tickets} onChange={(value) => update('bodega_ai_tickets', value)} errors={errors} /></div>}
+                    {step === 4 && <div className="space-y-6">{amountGroup(gasFields)}{verifoneItemGroups.map(({ key, title }) => <Items key={key} name={key} title={title} values={form[key]} onChange={(value) => update(key, value)} errors={errors} />)}</div>}
                   </fieldset>
                   <div className="mobile-action-bar sticky bottom-0 z-10 flex gap-3 rounded-b-2xl border-t border-slate-100 bg-slate-50/95 px-4 py-3 backdrop-blur sm:static sm:justify-between sm:rounded-b-3xl sm:px-8 sm:py-4">
                     <button type="button" disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className={`${buttonClass} flex-1 border-transparent disabled:invisible sm:flex-none`}><ArrowLeft size={16} /> Back</button>

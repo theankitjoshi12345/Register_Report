@@ -19,6 +19,7 @@ from .lottery.services import MAX_LINE_ITEMS, MONEY_FIELDS, _text, calculate_dai
 from .models import DailyReport, ReportLineItem, ScratchOffRoll
 
 LINE_ITEM_FIELDS = (
+    (ReportLineItem.BODEGA_AI_TICKET, "bodega_ai_tickets"),
     (ReportLineItem.TICKET, "tickets"),
     (ReportLineItem.VENDOR_PAYOUT, "vendor_payouts"),
     (ReportLineItem.SAFE_DROP, "safe_drops"),
@@ -422,6 +423,10 @@ def _daily_summaries(history):
                     "lottery_sales": register_sales,
                     "lottery_payout": register_payout,
                     "bodega_net_difference": inputs["bodega_net_difference"],
+                    "bodega_ai_ticket_total": line_items["bodega_ai_tickets"]["total"],
+                    "bodega_ai_register_balance": (
+                        inputs["bodega_net_difference"] + line_items["bodega_ai_tickets"]["total"]
+                    ),
                     "gas_net_difference": None if any(value is None for value in gas_differences) else sum(
                         (Decimal(str(value)) for value in gas_differences), Decimal("0.00"),
                     ),

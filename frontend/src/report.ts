@@ -28,15 +28,17 @@ export const gasFields = [
 ] as const
 export const fields = [...independentFields, ...bodegaFields, ...gasFields]
 export type AmountKey = typeof fields[number][0]
-export type ItemKey = 'tickets' | 'vendor_payouts' | 'safe_drops'
-export const itemGroups: { key: ItemKey; title: string; type: string }[] = [
+export type ItemKey = 'bodega_ai_tickets' | 'tickets' | 'vendor_payouts' | 'safe_drops'
+export const bodegaAiTicketGroup = { key: 'bodega_ai_tickets', title: 'Bodega AI tickets', type: 'bodega_ai_ticket' } as const
+export const verifoneItemGroups: { key: ItemKey; title: string; type: string }[] = [
   { key: 'tickets', title: 'Tickets', type: 'ticket' },
   { key: 'vendor_payouts', title: 'Vendor payouts', type: 'vendor_payout' },
   { key: 'safe_drops', title: 'Safe drops', type: 'safe_drop' },
 ]
+export const itemGroups: { key: ItemKey; title: string; type: string }[] = [bodegaAiTicketGroup, ...verifoneItemGroups]
 export type FormState = Record<AmountKey, string> & {
   report_date: string; close_type: CloseType; close_label: string
-  tickets: LineItem[]; vendor_payouts: LineItem[]; safe_drops: LineItem[]; scratch_offs: ScratchOff[]
+  bodega_ai_tickets: LineItem[]; tickets: LineItem[]; vendor_payouts: LineItem[]; safe_drops: LineItem[]; scratch_offs: ScratchOff[]
 }
 export type Report = {
   id: number; report_date: string; close_type: CloseType; close_label: string; created_at: string
@@ -55,7 +57,12 @@ export type Report = {
       previous_cumulative_sales: string; previous_cumulative_payout: string
       shift_sales: string; shift_payout: string
     }
-    registers: { bodega_net_difference: string; gas_net_difference: string | null }
+    registers: {
+      bodega_net_difference: string
+      bodega_ai_ticket_total?: string
+      bodega_ai_register_balance?: string
+      gas_net_difference: string | null
+    }
     normalized_line_items?: { item_type: string; amount: string; description: string }[]
     normalized_scratch_offs?: { slot_number: number; ending_number: number | null; new_roll_count: number }[]
   }
@@ -71,7 +78,11 @@ export type DailySummary = {
   }
   inputs: Partial<Record<AmountKey, string | null>>
   line_items: Record<ItemKey, { total: string; entries: { report_id: number; shift_name: string; amount: string; description: string }[] }>
-  registers: { lottery_sales: string; lottery_payout: string; bodega_net_difference: string; gas_net_difference: string | null }
+  registers: {
+    lottery_sales: string; lottery_payout: string; bodega_net_difference: string
+    bodega_ai_ticket_total: string; bodega_ai_register_balance: string
+    gas_net_difference: string | null
+  }
   comparisons: { phone_card_sales: Comparison; lottery_sales: Comparison; lottery_payout: Comparison }
 }
 
@@ -79,15 +90,15 @@ export const steps = [
   { label: 'Shift details', fields: ['report_date', 'close_label'] },
   { label: 'Machine totals', fields: independentFields.map(([key]) => key) },
   { label: 'Scratch-off count', fields: ['scratch_offs'] },
-  { label: 'Bodega AI', fields: bodegaFields.map(([key]) => key) },
-  { label: 'Verifone', fields: [...gasFields.map(([key]) => key), ...itemGroups.map(({ key }) => key)] },
+  { label: 'Bodega AI', fields: [...bodegaFields.map(([key]) => key), bodegaAiTicketGroup.key] },
+  { label: 'Verifone', fields: [...gasFields.map(([key]) => key), ...verifoneItemGroups.map(({ key }) => key)] },
 ]
 export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 export const initialScratch = (): ScratchOff[] => Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ending_number: '', new_roll_count: 0 }))
 export const initialForm = (): FormState => ({
   report_date: localDate(), close_type: 'shift', close_label: '',
   ...Object.fromEntries(fields.map(([key]) => [key, ''])) as Record<AmountKey, string>,
-  tickets: [], vendor_payouts: [], safe_drops: [], scratch_offs: initialScratch(),
+  bodega_ai_tickets: [], tickets: [], vendor_payouts: [], safe_drops: [], scratch_offs: initialScratch(),
 })
 export const money = (value: string | null | undefined) => value == null ? 'Needs entry' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
 

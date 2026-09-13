@@ -10,8 +10,8 @@ export function FieldError({ name, errors }: { name: string; errors: FieldErrors
   return message ? <p id={`${name}-error`} className="mt-2 text-sm text-rose-800">{message}</p> : null
 }
 
-export function Amount({ name, label, value, signed, explicitSign, onChange, errors }: {
-  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; onChange: (value: string) => void; errors: FieldErrors
+export function Amount({ name, label, value, signed, explicitSign, strictlyPositive, onChange, errors }: {
+  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; strictlyPositive?: boolean; onChange: (value: string) => void; errors: FieldErrors
 }) {
   const sign = value.trim().startsWith('-') ? '-' : '+'
   const magnitude = signed ? value.trim().replace(/^[+-]/, '') : value
@@ -32,7 +32,7 @@ export function Amount({ name, label, value, signed, explicitSign, onChange, err
         </select>}
         <div className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">$</span>
-          <input id={name} name={name} required type="number" inputMode="decimal" step="0.01" min="0"
+          <input id={name} name={name} required type="number" inputMode="decimal" step="0.01" min={strictlyPositive ? '0.01' : '0'}
             placeholder={signed ? '25.00' : undefined}
             value={magnitude} onChange={(event) => signed ? updateSignedValue(sign, event.target.value) : onChange(event.target.value)}
             aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined}
@@ -55,11 +55,13 @@ export function Items({ name, title, values, onChange, errors }: {
           className={`${buttonClass} px-3 py-2 text-xs text-teal-800`}><Plus size={14} /> Add amount</button>
       </div>
       <FieldError name={name} errors={errors} />
+      {name === 'bodega_ai_tickets' && <p className="mb-4 text-sm text-slate-600">Fill this up if anybody has charged any ticket.</p>}
       {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Choose <strong>+</strong> when a ticket is created for the customer and <strong>−</strong> when the customer pays the ticket.</p>}
       {values.length === 0 ? <p className="text-sm text-slate-500">Nothing added.</p> : values.map((item, index) => (
         <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]" key={`${name}-${index}`}>
           <Amount name={`${name}.${index}.amount`} label={`${title} amount ${index + 1}`} value={item.amount}
             signed={name === 'tickets'} explicitSign={name === 'tickets'}
+            strictlyPositive={name === 'bodega_ai_tickets'}
             errors={errors} onChange={(amount) => onChange(values.map((row, rowIndex) => rowIndex === index ? { ...row, amount } : row))} />
           <div>
             <label htmlFor={`${name}.${index}.description`} className="mb-2 block text-sm font-medium">Description (optional)</label>

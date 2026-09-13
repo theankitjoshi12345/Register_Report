@@ -16,7 +16,7 @@ def report_payload(report_date="2026-09-10", close_type="shift", **overrides):
     return {
         "report_date": report_date, "close_type": close_type, "close_label": "",
         **dict.fromkeys(MONEY_FIELDS, "0.00"),
-        "scratch_offs": [], "tickets": [], "vendor_payouts": [], "safe_drops": [],
+        "scratch_offs": [], "bodega_ai_tickets": [], "tickets": [], "vendor_payouts": [], "safe_drops": [],
         **overrides,
     }
 
@@ -59,9 +59,27 @@ class ReportInputTests(SimpleTestCase):
         self.assertEqual([item["amount"] for item in calculated["inputs"]["tickets"]], [
             Decimal("20.00"), Decimal("-8.00"),
         ])
-        for field in ("vendor_payouts", "safe_drops"):
+        for field in ("bodega_ai_tickets", "vendor_payouts", "safe_drops"):
             with self.subTest(field=field), self.assertRaises(ValidationError):
                 calculate_daily_report(report_payload(**{field: [{"amount": "-1.00"}]}))
+        with self.assertRaises(ValidationError) as error:
+            calculate_daily_report(report_payload(bodega_ai_tickets=[{"amount": "0.00"}]))
+        self.assertIn("bodega_ai_tickets.0.amount", error.exception.message_dict)
+
+    def test_bodega_ai_tickets_adjust_the_balance_without_changing_raw_net_difference(self):
+        for raw, expected in (("-50.00", "-30.00"), ("5.00", "25.00")):
+            with self.subTest(raw=raw):
+                calculated = calculate_daily_report(report_payload(
+                    bodega_net_difference=raw,
+                    bodega_ai_tickets=[{"amount": "10.00"}, {"amount": "10.00", "description": "Second"}],
+                ))
+                self.assertEqual(calculated["inputs"]["bodega_net_difference"], Decimal(raw))
+                self.assertEqual(calculated["registers"]["bodega_net_difference"], Decimal(raw))
+                self.assertEqual(calculated["registers"]["bodega_ai_ticket_total"], Decimal("20.00"))
+                self.assertEqual(calculated["registers"]["bodega_ai_register_balance"], Decimal(expected))
+        empty = calculate_daily_report(report_payload(bodega_net_difference="-7.25"))
+        self.assertEqual(empty["registers"]["bodega_ai_ticket_total"], Decimal("0.00"))
+        self.assertEqual(empty["registers"]["bodega_ai_register_balance"], Decimal("-7.25"))
 
     def test_zero_baseline_conserves_every_catalog_counter_range(self):
         for slot in SCRATCH_OFF_SLOTS:
@@ -201,6 +219,7 @@ class ReportHistoryTests(TestCase):
             bodega_lottery_sales="300", gas_lottery_sales="200",
             bodega_lottery_payout="60", gas_lottery_payout="40",
             phone_card_actual_sales="10", bodega_phone_card_sales="4", gas_phone_card_sales="6",
+            bodega_net_difference="-50", bodega_ai_tickets=[{"amount": "10", "description": "First Bodega ticket"}],
             tickets=[{"amount": "5", "description": "First ticket"}],
         )
         second = self.create(
@@ -208,6 +227,7 @@ class ReportHistoryTests(TestCase):
             bodega_lottery_sales="400", gas_lottery_sales="300",
             bodega_lottery_payout="90", gas_lottery_payout="60",
             phone_card_actual_sales="20", bodega_phone_card_sales="8", gas_phone_card_sales="12",
+            bodega_net_difference="5", bodega_ai_tickets=[{"amount": "10"}],
             safe_drops=[{"amount": "25"}], vendor_payouts=[{"amount": "7"}],
         )
         third = self.create(
@@ -231,6 +251,10 @@ class ReportHistoryTests(TestCase):
         self.assertEqual(summary["comparisons"]["lottery_payout"]["status"], "match")
         self.assertEqual(summary["comparisons"]["phone_card_sales"]["status"], "match")
         self.assertEqual(summary["line_items"]["tickets"]["total"], "5.00")
+        self.assertEqual(summary["line_items"]["bodega_ai_tickets"]["total"], "20.00")
+        self.assertEqual(summary["registers"]["bodega_net_difference"], "-45.00")
+        self.assertEqual(summary["registers"]["bodega_ai_ticket_total"], "20.00")
+        self.assertEqual(summary["registers"]["bodega_ai_register_balance"], "-25.00")
         self.assertEqual(summary["line_items"]["safe_drops"]["total"], "25.00")
         self.assertEqual(summary["line_items"]["vendor_payouts"]["total"], "7.00")
 

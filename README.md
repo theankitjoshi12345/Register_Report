@@ -102,10 +102,24 @@ not extend the fifteen-minute window.
 
 The form has five steps: shift details, machine totals, scratch-off counters,
 Bodega AI figures, and Verifone figures. Monetary fields are required;
-explicit zero is accepted. Bodega's net difference may be negative. Tickets,
-vendor payouts, and safe drops are optional lists with amounts and descriptions.
+explicit zero is accepted. Bodega's net difference may be negative. Bodega AI
+tickets, Verifone tickets, vendor payouts, and safe drops are optional lists
+with amounts and descriptions.
 Signed fields use a separate `+`/`−` selector so they work with mobile numeric
 keypads that do not provide a minus key.
+
+The optional Bodega AI Ticket section accepts multiple positive amounts and an
+optional description for each. It has no sign selector. These amounts adjust
+the raw Bodega net difference without replacing it:
+
+```text
+Bodega AI Ticket Total = sum of Bodega AI ticket amounts
+Register Balance = entered Bodega net difference + Bodega AI Ticket Total
+```
+
+An empty list contributes `$0.00`. Shift history and daily summaries present
+the adjusted value as **Register Balance**, while retaining the original net
+difference in the entered figures.
 
 A shift close covers activity since the previous shift. Scratch-off counters
 follow earlier shifts in creation order, including the final shift from the
@@ -147,7 +161,9 @@ Difference = recorded − expected. Exactly zero is a match. Django validates
 money using decimal arithmetic with up to two decimal places and at most
 9,999,999,999.99 per entered amount.
 
-Bodega's net difference is entered directly. Verifone net difference is:
+Bodega's net difference is entered directly and its Register Balance includes
+the positive Bodega AI ticket adjustment described above. Verifone net
+difference is:
 
 ```text
 Verifone total cash sales

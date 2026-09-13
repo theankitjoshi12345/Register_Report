@@ -7,6 +7,8 @@
 - Independent lottery/phone-card comparisons and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
 - Decimal money validation, bounded ticket counters, and optional described line items.
+- Positive-only Bodega AI ticket adjustments with raw net-difference retention
+  and an adjusted Register Balance in shift history and daily summaries.
 - Scratch-off history scoped to each store, including exhausted rolls.
 - Shift counters chained by creation order within and across business dates.
 - Cumulative lottery terminal readings converted into shift-only sales and payout,

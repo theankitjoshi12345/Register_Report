@@ -44,7 +44,9 @@ export default function DailySummaryView({ summary, onOpenShift, onNewShift }: {
       <h2 className="text-xl font-bold">Combined shift figures</h2>
       <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {combinedFields.map(([key, label]) => <div key={key}><dt className="text-xs text-slate-500">{label.replace('Current cumulative ', '')}</dt><dd className="font-semibold">{money(summary.inputs[key])}</dd></div>)}
-        <div><dt className="text-xs text-slate-500">Combined Bodega net difference</dt><dd className="font-semibold">{money(summary.registers.bodega_net_difference)}</dd></div>
+        <div><dt className="text-xs text-slate-500">Register Balance</dt><dd className="font-semibold">{money(summary.registers.bodega_ai_register_balance)}</dd></div>
+        <div><dt className="text-xs text-slate-500">Combined Bodega net difference (entered)</dt><dd className="font-semibold">{money(summary.registers.bodega_net_difference)}</dd></div>
+        <div><dt className="text-xs text-slate-500">Total Bodega AI ticket amount</dt><dd className="font-semibold">{money(summary.registers.bodega_ai_ticket_total)}</dd></div>
         <div><dt className="text-xs text-slate-500">Combined Verifone net difference</dt><dd className="font-semibold">{money(summary.registers.gas_net_difference)}</dd></div>
       </dl>
       <div className="mt-7 grid gap-4 md:grid-cols-3">{itemGroups.map(({ key, title }) => <section key={key} className="rounded-xl bg-slate-50 p-4"><h3 className="font-semibold">{title}</h3><p className="mt-2 text-xl font-bold">{money(summary.line_items[key].total)}</p>{summary.line_items[key].entries.length > 0 && <ul className="mt-3 space-y-2 text-sm">{summary.line_items[key].entries.map((entry, index) => <li key={`${entry.report_id}-${index}`}><strong>{money(entry.amount)}</strong>{entry.description && <span className="ml-2 text-slate-600">{entry.description}</span>}</li>)}</ul>}</section>)}</div>

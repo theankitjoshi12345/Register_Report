@@ -25,17 +25,19 @@ globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0)
 const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
-const { initialForm, fields, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const { initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
 const signedOut = { user: null, stores: [], csrfToken: 'anonymous-token' }
 const matched = { expected: '0.00', actual: '0.00', difference: '0.00', status: 'match' }
 function reportFromForm(form, id = 1) {
+  const bodegaAiTicketTotal = form.bodega_ai_tickets.reduce((total, item) => total + Number(item.amount), 0)
+  const bodegaAiRegisterBalance = Number(form.bodega_net_difference) + bodegaAiTicketTotal
   return {
     id, report_date: form.report_date, close_type: form.close_type, close_label: form.close_label, created_at: '2026-09-10T12:00:00Z',
     calculated: {
-      inputs: Object.fromEntries([...fields.map(([key]) => [key, form[key]]), ...['tickets', 'vendor_payouts', 'safe_drops'].map((key) => [key, form[key]])]),
+      inputs: Object.fromEntries([...fields.map(([key]) => [key, form[key]]), ...itemGroups.map(({ key }) => [key, form[key]])]),
       scratch_off: {
         sales: '15.00',
         slots: Object.fromEntries(form.scratch_offs.filter((row) => row.recorded !== false).map((row) => [String(row.slot_number), {
@@ -48,8 +50,13 @@ function reportFromForm(form, id = 1) {
         previous_cumulative_sales: '0.00', previous_cumulative_payout: '0.00',
         shift_sales: form.lottery_terminal_sales, shift_payout: form.lottery_terminal_payout,
       },
-      registers: { bodega_net_difference: form.bodega_net_difference, gas_net_difference: '20.00' },
-      normalized_line_items: [['tickets', 'ticket'], ['vendor_payouts', 'vendor_payout'], ['safe_drops', 'safe_drop']].flatMap(([key, item_type]) => form[key].map((item) => ({ ...item, item_type }))),
+      registers: {
+        bodega_net_difference: form.bodega_net_difference,
+        bodega_ai_ticket_total: bodegaAiTicketTotal.toFixed(2),
+        bodega_ai_register_balance: bodegaAiRegisterBalance.toFixed(2),
+        gas_net_difference: '20.00',
+      },
+      normalized_line_items: itemGroups.flatMap(({ key, type: item_type }) => form[key].map((item) => ({ ...item, item_type }))),
       normalized_scratch_offs: form.scratch_offs.map((row) => ({ ...row, ending_number: row.ending_number === '' ? null : Number(row.ending_number), new_roll_count: Number(row.new_roll_count) })),
     },
   }
@@ -64,8 +71,8 @@ function summaryFromReports(reports) {
     terminal: { final_cumulative_sales: latest.calculated.terminal.cumulative_sales, final_cumulative_payout: latest.calculated.terminal.cumulative_payout },
     scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {} },
     inputs: Object.fromEntries(fields.map(([key]) => [key, latest.calculated.inputs[key]])),
-    line_items: Object.fromEntries(['tickets', 'vendor_payouts', 'safe_drops'].map((key) => [key, { total: '0.00', entries: [] }])),
-    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', gas_net_difference: '20.00' },
+    line_items: Object.fromEntries(itemGroups.map(({ key }) => [key, { total: '0.00', entries: [] }])),
+    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', bodega_ai_ticket_total: '0.00', bodega_ai_register_balance: '0.00', gas_net_difference: '20.00' },
     comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
   }]
 }
@@ -185,6 +192,29 @@ test('sign selectors support negative amounts without a minus key', async () => 
   await click('Save report')
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.equal(save.body.tickets[0].amount, '-8.25')
+})
+
+test('Bodega AI tickets are optional, positive-only, and adjust Register Balance', async () => {
+  await render()
+  await click('Continue'); await fillVisible(); await click('Continue'); await click('Continue'); await fillVisible()
+  await enter('Bodega net difference sign', '-'); await enter('bodega_net_difference', '50')
+  assert.match(container.textContent, /Fill this up if anybody has charged any ticket/)
+  await click('Add bodega ai tickets amount')
+  assert.equal(container.querySelector('[aria-label="Bodega AI tickets amount 1 sign"]'), null)
+  assert.equal(input('bodega_ai_tickets.0.amount').min, '0.01')
+  await enter('bodega_ai_tickets.0.amount', '10'); await enter('bodega_ai_tickets.0.description', 'Customer ticket')
+  await click('Add bodega ai tickets amount'); await enter('bodega_ai_tickets.1.amount', '10')
+  await click('Continue'); await fillVisible(); await click('Save report')
+  const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
+  assert.deepEqual(save.body.bodega_ai_tickets, [
+    { amount: '10', description: 'Customer ticket' },
+    { amount: '10', description: '' },
+  ])
+  assert.match(container.textContent, /Register Balance/)
+  assert.match(container.textContent, /-\$30\.00/)
+  await click('Edit'); await click('Continue'); await click('Continue'); await click('Continue')
+  assert.equal(input('bodega_ai_tickets.0.amount').value, '10')
+  assert.equal(input('bodega_ai_tickets.0.description').value, 'Customer ticket')
 })
 
 test('Enter on an earlier step advances without creating a report', async () => {

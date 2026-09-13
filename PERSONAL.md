@@ -104,6 +104,23 @@ backend uses it for the shift and automatic day summary.
 
 At the end of each shift, this is the difference shown by the Bodega AI register.
 It can be positive or negative, so users must be able to enter either value.
+The entered value remains the original raw value.
+
+An optional Bodega AI Ticket section appears with the net-difference entry. Its
+subtitle is: "Fill this up if anybody has charged any ticket." Users may add
+multiple entries, each with a required positive amount and an optional
+description. This section does not use a `+`/`-` selector.
+
+The final Bodega AI result is labeled **Register Balance** and is calculated as:
+
+```text
+Total Bodega AI Ticket Amount = sum of Bodega AI ticket amounts
+Register Balance = Bodega AI Net Difference + Total Bodega AI Ticket Amount
+```
+
+An empty ticket list has a total of `$0.00`, so the Register Balance equals the
+entered net difference. For example, `-$50.00 + $20.00 = -$30.00`, and
+`$5.00 + $20.00 = $25.00`.
 
 ## What the owner enters for every shift close
 
@@ -127,6 +144,7 @@ All of these items must be organized into steps:
 ### Bodega AI
 
 - Net difference
+- Optional positive ticket amounts with optional descriptions
 - Lottery sales
 - Lottery payout
 - Phone cards
@@ -161,6 +179,8 @@ All of these items must be organized into steps:
   means a ticket was created for the customer and `-` means the customer paid it.
 - The Bodega AI net difference is required and may be positive or negative, with
   up to two decimal places.
+- Bodega AI ticket amounts are optional, positive-only adjustments. They are
+  stored separately from the existing signed Verifone ticket entries.
 - Reports must be editable after saving.
 - Report data should use normalized, queryable records for line items and
   scratch-off rolls rather than relying only on JSON blobs.
@@ -169,8 +189,9 @@ All of these items must be organized into steps:
 
 For phone cards, the backend will check the difference described above. It will
 also derive the current shift's terminal sales and payout before comparing them
-with the shift register values. For Bodega AI, it will display the net difference
-amount.
+with the shift register values. For Bodega AI, it stores the entered net
+difference unchanged, adds the optional Bodega AI ticket total, and presents the
+result as Register Balance in shift history and daily summaries.
 
 For Verifone, it will calculate:
 
@@ -189,7 +210,7 @@ negative.
 The backend should provide these values in a table:
 
 ```text
-Bodega AI [Net Difference: ]
+Bodega AI [Register Balance: ]
 Verifone [Net Difference: ]
 
 Phone card [Expected: , Actual: ]

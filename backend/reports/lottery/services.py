@@ -164,11 +164,14 @@ def _line_items(values, field):
     for index, item in enumerate(values):
         if not isinstance(item, dict):
             raise ValidationError({field: f"Item {index + 1} is invalid."})
+        amount = _money(
+            item.get("amount"), f"{field}.{index}.amount",
+            allow_negative=field == "tickets",
+        )
+        if field == "bodega_ai_tickets" and amount <= 0:
+            raise ValidationError({f"{field}.{index}.amount": "Amount must be greater than zero."})
         result.append({
-            "amount": _money(
-                item.get("amount"), f"{field}.{index}.amount",
-                allow_negative=field == "tickets",
-            ),
+            "amount": amount,
             "description": _text(item.get("description", ""), f"{field}.{index}.description", 255),
         })
     return result
@@ -186,11 +189,15 @@ def calculate_daily_report(
         for field in MONEY_FIELDS
     }
     scratch = calculate_scratch_off_sales(data.get("scratch_offs", []))
+    bodega_ai_tickets = _line_items(data.get("bodega_ai_tickets", []), "bodega_ai_tickets")
     tickets = _line_items(data.get("tickets", []), "tickets")
     vendor_payouts = _line_items(data.get("vendor_payouts", []), "vendor_payouts")
     safe_drops = _line_items(data.get("safe_drops", []), "safe_drops")
 
     scratch_sales = scratch["total_sales"]
+    bodega_ai_ticket_total = sum(
+        (item["amount"] for item in bodega_ai_tickets), _money("0", "bodega_ai_tickets")
+    )
     ticket_total = sum((item["amount"] for item in tickets), _money("0", "tickets"))
     vendor_total = sum((item["amount"] for item in vendor_payouts), _money("0", "vendor_payouts"))
     safe_drop_total = sum((item["amount"] for item in safe_drops), _money("0", "safe_drops"))
@@ -225,7 +232,13 @@ def calculate_daily_report(
         }
 
     return {
-        "inputs": {**values, "tickets": tickets, "vendor_payouts": vendor_payouts, "safe_drops": safe_drops},
+        "inputs": {
+            **values,
+            "bodega_ai_tickets": bodega_ai_tickets,
+            "tickets": tickets,
+            "vendor_payouts": vendor_payouts,
+            "safe_drops": safe_drops,
+        },
         "scratch_off": {"slots": scratch["slots"], "sales": scratch_sales},
         "comparisons": {
             "phone_card_sales": comparison(values["phone_card_actual_sales"], pos_phone_cards),
@@ -248,6 +261,8 @@ def calculate_daily_report(
         },
         "registers": {
             "bodega_net_difference": values["bodega_net_difference"],
+            "bodega_ai_ticket_total": bodega_ai_ticket_total,
+            "bodega_ai_register_balance": values["bodega_net_difference"] + bodega_ai_ticket_total,
             "gas_net_difference": gas_net,
         },
     }

@@ -24,7 +24,7 @@ def close_payload(**changes):
     )
     return {
         **values, "report_date": "2026-09-10", "close_type": "shift", "close_label": "",
-        "scratch_offs": [], "tickets": [], "vendor_payouts": [], "safe_drops": [],
+        "scratch_offs": [], "bodega_ai_tickets": [], "tickets": [], "vendor_payouts": [], "safe_drops": [],
         **changes,
     }
 

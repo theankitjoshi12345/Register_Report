@@ -28,7 +28,7 @@ class ReportSecurityTests(TestCase):
         )
 
     def test_oversized_line_item_arrays_are_rejected_without_writing(self):
-        for field in ("tickets", "vendor_payouts", "safe_drops"):
+        for field in ("bodega_ai_tickets", "tickets", "vendor_payouts", "safe_drops"):
             with self.subTest(field=field):
                 response = self.post_report(**{field: [{"amount": "1.00"}] * (MAX_LINE_ITEMS + 1)})
                 self.assertEqual(response.status_code, 400, response.content)
@@ -42,9 +42,19 @@ class ReportSecurityTests(TestCase):
         self.assertEqual(report.line_items.count(), MAX_LINE_ITEMS)
         self.assertEqual(report.calculated_report["registers"]["gas_net_difference"], f"{MAX_LINE_ITEMS}.00")
 
+        bodega = self.post_report(
+            report_date="2026-09-11",
+            bodega_ai_tickets=[{"amount": "1.00"}] * MAX_LINE_ITEMS,
+        )
+        self.assertEqual(bodega.status_code, 201, bodega.content)
+        self.assertEqual(
+            bodega.json()["calculated"]["registers"]["bodega_ai_register_balance"],
+            f"{MAX_LINE_ITEMS}.00",
+        )
+
     def test_database_unsafe_text_is_rejected_as_a_field_error(self):
         for value in ("before\x00after", "\ud800", "\udfff"):
-            for field in ("close_label", "tickets", "vendor_payouts", "safe_drops"):
+            for field in ("close_label", "bodega_ai_tickets", "tickets", "vendor_payouts", "safe_drops"):
                 with self.subTest(value=repr(value), field=field):
                     changes = {field: value if field == "close_label" else [{"amount": "1.00", "description": value}]}
                     response = self.post_report(**changes)

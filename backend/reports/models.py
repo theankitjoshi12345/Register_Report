@@ -116,6 +116,7 @@ class DailyReport(models.Model):
     gas_phone_card_sales = models.DecimalField(max_digits=12, decimal_places=2)
     # Existing reports do not contain an independent card-payment total.
     gas_card_payment_sales = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    bodega_ai_tickets = models.JSONField(default=list)
     tickets = models.JSONField(default=list)
     vendor_payouts = models.JSONField(default=list)
     safe_drops = models.JSONField(default=list)
@@ -135,13 +136,15 @@ class DailyReport(models.Model):
 
 
 class ReportLineItem(models.Model):
-    """A queryable ticket, vendor payout, or safe-drop entry."""
+    """A queryable Bodega ticket, Verifone ticket, payout, or safe drop."""
 
     TICKET = "ticket"
+    BODEGA_AI_TICKET = "bodega_ai_ticket"
     VENDOR_PAYOUT = "vendor_payout"
     SAFE_DROP = "safe_drop"
     ITEM_TYPES = (
         (TICKET, "Ticket"),
+        (BODEGA_AI_TICKET, "Bodega AI ticket"),
         (VENDOR_PAYOUT, "Vendor payout"),
         (SAFE_DROP, "Safe drop"),
     )
@@ -159,6 +162,10 @@ class ReportLineItem(models.Model):
             models.CheckConstraint(
                 condition=models.Q(item_type="ticket") | models.Q(amount__gte=0),
                 name="report_line_item_amount_valid",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(item_type="bodega_ai_ticket") | models.Q(amount__gt=0),
+                name="bodega_ticket_amount_positive",
             ),
         ]
 
