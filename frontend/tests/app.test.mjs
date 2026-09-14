@@ -150,7 +150,6 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await enter('report_date', '2026-09-10'); await enter('close_label', 'Evening review')
   await click('Continue')
   assert.match(currentStep(), /Machine totals/)
-  await click('Continue'); assert.match(currentStep(), /Machine totals/)
   await fillVisible()
   await enter('phone_card_actual_sales', '-1'); await click('Continue'); assert.match(currentStep(), /Machine totals/)
   await enter('phone_card_actual_sales', '1.001'); await click('Continue'); assert.match(currentStep(), /Machine totals/)
@@ -199,12 +198,24 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
 test('sign selectors support negative amounts without a minus key', async () => {
   await render(); await goToGas(); await fillVisible()
   await click('Add verifone tickets amount')
+  assert.ok(input('tickets.0.amount').compareDocumentPosition(button('Add verifone tickets amount')) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING)
   assert.match(container.textContent, /Choose \+ when a ticket is created for the customer and − when the customer pays the ticket/)
   assert.doesNotMatch(container.textContent, /Phone card sales are prepaid phone cards/)
   await enter('Verifone tickets amount 1 sign', '-'); await enter('tickets.0.amount', '8.25')
   await click('Save report')
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.equal(save.body.tickets[0].amount, '-8.25')
+})
+
+test('required numeric fields default to zero and an untouched shift can be saved', async () => {
+  assert.ok(fields.every(([key]) => initialForm()[key] === '0.00'))
+  await render()
+  await click('Continue'); await click('Continue'); await click('Continue'); await click('Continue'); await click('Save report')
+  const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
+  assert.ok(save)
+  for (const [key] of fields) assert.equal(save.body[key], '0.00')
+  assert.ok(save.body.scratch_offs.every((row) => row.new_roll_count === 0))
+  assert.match(container.textContent, /Shift report/)
 })
 
 test('Bodega AI tickets are optional, positive-only, and adjust Register Balance', async () => {
@@ -444,6 +455,27 @@ test('daily summaries are automatic and shift history still shows legacy missing
   await click('Edit'); await goToGas()
   assert.equal(input('gas_phone_card_sales').value, '12.00'); assert.equal(input('gas_card_payment_sales').value, '')
   await click('Save changes'); assert.match(currentStep(), /Verifone/)
+})
+
+test('history is ordered by newest date, daily report, legacy day, and shifts', async () => {
+  const morning = reportFromForm(completeForm({ report_date: '2026-09-10', close_label: 'Morning' }), 1)
+  const evening = reportFromForm(completeForm({ report_date: '2026-09-10', close_label: 'Evening' }), 2)
+  const legacy = reportFromForm(completeForm({ report_date: '2026-09-10', close_type: 'day', close_label: 'Manual' }), 3)
+  const later = reportFromForm(completeForm({ report_date: '2026-09-11', close_label: 'Later' }), 4)
+  morning.created_at = '2026-09-10T08:00:00Z'; evening.created_at = '2026-09-10T20:00:00Z'
+  history = [morning, later, legacy, evening]
+  const dailySummaries = [summaryFromReports([morning, evening])[0], summaryFromReports([later])[0]]
+  override = (call) => call.url === '/api/reports/' && call.method === 'GET' ? json({ reports: history, daily_summaries: dailySummaries }) : null
+  await render()
+  const entries = [...container.querySelectorAll('details button')].map((entry) => entry.textContent.trim())
+  assert.deepEqual(entries, [
+    '2026-09-11Daily summary · 1 shift',
+    '2026-09-11Shift Later',
+    '2026-09-10Daily summary · 2 shifts',
+    '2026-09-10Legacy day close Manual',
+    '2026-09-10Shift Evening',
+    '2026-09-10Shift Morning',
+  ])
 })
 
 test('business date uses local calendar components rather than a UTC date', () => {

@@ -102,7 +102,8 @@ not extend the fifteen-minute window.
 
 The form has five steps: shift details, machine totals, scratch-off counters,
 Bodega AI figures, and Verifone figures. Monetary fields are required;
-explicit zero is accepted. Bodega's net difference may be positive or negative.
+they default to `0.00`, so a zero-activity shift can be saved without filling
+each amount manually. Bodega's net difference may be positive or negative.
 Its sign selector uses `+` for short and `−` for over, with the same meaning
 retained by the calculated Bodega AI Register Balance. Bodega AI tickets,
 Verifone tickets, vendor payouts, and safe drops are optional lists with amounts
@@ -146,11 +147,11 @@ sums scratch-off sales and new rolls, carries the final scratch state forward,
 and totals register figures, phone cards, safe drops, tickets, and vendor
 payouts. Previously saved manual day closes remain editable legacy records.
 
-History lets you review individual shifts, automatic daily summaries, and legacy
-day closes. Correcting or backdating a shift recalculates subsequent scratch-off
-and terminal results for that store. If a correction makes a later counter or
-cumulative reading invalid, the save identifies the conflicting report and the
-transaction leaves the history unchanged.
+History groups entries by newest business date first, followed by that date's
+automatic or legacy day report and then its shifts. Correcting or backdating a
+shift recalculates subsequent scratch-off and terminal results for that store.
+If a correction makes a later counter or cumulative reading invalid, the save
+identifies the conflicting report and the transaction leaves history unchanged.
 
 Automatic daily summaries use the same report layout as legacy day closes. They
 show register balances, reconciliation, combined entered figures, separate line

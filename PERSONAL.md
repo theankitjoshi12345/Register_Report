@@ -131,6 +131,9 @@ the Bodega AI ticket total.
 
 All of these items must be organized into steps:
 
+Required numeric fields default to zero so a zero-activity shift can be closed
+without manually filling every input.
+
 ### Independent items
 
 - Phone-card sales

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Archive, ArrowRight, LogOut, Store } from 'lucide-react'
 import { buttonClass, inputClass } from './FormFields'
 import type { DailySummary, Report, Session } from './report'
@@ -10,6 +10,9 @@ export default function Header({ reports, summaries, onSelect, onSelectSummary, 
   const [historyDate, setHistoryDate] = useState('')
   const matches = reports.filter((report) => !historyDate || report.report_date === historyDate)
   const summaryMatches = summaries.filter((summary) => !historyDate || summary.report_date === historyDate)
+  const historyDates = [...new Set([...matches.map((report) => report.report_date), ...summaryMatches.map((summary) => summary.report_date)])]
+    .sort((left, right) => right.localeCompare(left))
+  const newestFirst = (left: Report, right: Report) => right.created_at.localeCompare(left.created_at) || right.id - left.id
   return (
     <header className="relative border-b border-slate-200 bg-white">
       <div className="mx-auto flex min-h-20 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4">
@@ -22,8 +25,11 @@ export default function Header({ reports, summaries, onSelect, onSelectSummary, 
               <label className="block p-2 text-sm font-medium">Filter by business date<input type="date" value={historyDate} onChange={(event) => setHistoryDate(event.target.value)} className={`${inputClass} mt-2`} /></label>
               {historyDate && <button type="button" onClick={() => setHistoryDate('')} className="px-3 py-2 text-sm text-teal-800">Clear date filter</button>}
               {matches.length === 0 && summaryMatches.length === 0 && <p className="p-3 text-sm text-slate-500">{reports.length ? 'No reports for this date.' : 'No saved reports yet.'}</p>}
-              {summaryMatches.map((summary) => <button type="button" key={`summary-${summary.report_date}`} onClick={(event) => { onSelectSummary(summary); event.currentTarget.closest('details')?.removeAttribute('open') }} className="flex w-full items-center justify-between gap-3 rounded-xl bg-teal-50 p-3 text-left hover:bg-teal-100"><span><strong className="block text-sm">{summary.report_date}</strong><small className="text-teal-800">Daily summary · {summary.shift_count} {summary.shift_count === 1 ? 'shift' : 'shifts'}</small></span><ArrowRight size={15} /></button>)}
-              {matches.map((report) => <button type="button" key={report.id} onClick={(event) => { onSelect(report); event.currentTarget.closest('details')?.removeAttribute('open') }} className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left hover:bg-teal-50"><span><strong className="block text-sm">{report.report_date}</strong><small className="text-slate-500">{report.close_type === 'day' ? 'Legacy day close' : 'Shift'} {report.close_label}</small></span><ArrowRight size={15} /></button>)}
+              {historyDates.map((date) => <Fragment key={date}>
+                {summaryMatches.filter((summary) => summary.report_date === date).map((summary) => <button type="button" key={`summary-${summary.report_date}`} onClick={(event) => { onSelectSummary(summary); event.currentTarget.closest('details')?.removeAttribute('open') }} className="flex w-full items-center justify-between gap-3 rounded-xl bg-teal-50 p-3 text-left hover:bg-teal-100"><span><strong className="block text-sm">{summary.report_date}</strong><small className="text-teal-800">Daily summary · {summary.shift_count} {summary.shift_count === 1 ? 'shift' : 'shifts'}</small></span><ArrowRight size={15} /></button>)}
+                {matches.filter((report) => report.report_date === date && report.close_type === 'day').sort(newestFirst).map((report) => <button type="button" key={report.id} onClick={(event) => { onSelect(report); event.currentTarget.closest('details')?.removeAttribute('open') }} className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left hover:bg-teal-50"><span><strong className="block text-sm">{report.report_date}</strong><small className="text-slate-500">Legacy day close {report.close_label}</small></span><ArrowRight size={15} /></button>)}
+                {matches.filter((report) => report.report_date === date && report.close_type === 'shift').sort(newestFirst).map((report) => <button type="button" key={report.id} onClick={(event) => { onSelect(report); event.currentTarget.closest('details')?.removeAttribute('open') }} className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left hover:bg-teal-50"><span><strong className="block text-sm">{report.report_date}</strong><small className="text-slate-500">Shift {report.close_label}</small></span><ArrowRight size={15} /></button>)}
+              </Fragment>)}
             </div>
           </details>
           <button type="button" onClick={onLogout} className={`${buttonClass} shrink-0 px-3 py-2 sm:px-4`} aria-label={`Sign out ${session.user.username}`}><LogOut size={16} /><span className="hidden sm:inline">Sign out</span></button>

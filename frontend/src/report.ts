@@ -101,7 +101,7 @@ export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(
 export const initialScratch = (): ScratchOff[] => Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ending_number: '', new_roll_count: 0 }))
 export const initialForm = (): FormState => ({
   report_date: localDate(), close_type: 'shift', close_label: '',
-  ...Object.fromEntries(fields.map(([key]) => [key, ''])) as Record<AmountKey, string>,
+  ...Object.fromEntries(fields.map(([key]) => [key, '0.00'])) as Record<AmountKey, string>,
   bodega_ai_tickets: [], tickets: [], vendor_payouts: [], safe_drops: [], scratch_offs: initialScratch(),
 })
 export const money = (value: string | null | undefined) => value == null ? 'Needs entry' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))

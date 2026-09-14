@@ -3,7 +3,9 @@
 ## Implemented
 
 - React/TypeScript/Tailwind form with five validated steps.
+- Zero defaults for required numeric fields, allowing an untouched zero-activity close.
 - Shift closes, automatic daily summaries, report history, and editable saved reports.
+- History grouped by newest date, with daily reports before that date's shifts.
 - Lottery comparisons using scratch-off value plus terminal sales, independent
   phone-card comparisons, and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
@@ -12,6 +14,7 @@
 - Bodega AI Register Balance shown as signed currency where `+` means short and
   `-` means over, with register-specific sign guidance in one shared result card.
 - Decimal money validation, bounded ticket counters, and optional described line items.
+- Line-item add controls placed after existing rows so new entries appear beside the action.
 - Positive-only Bodega AI ticket adjustments with raw net-difference retention
   and an adjusted Register Balance in shift history and daily summaries.
 - Scratch-off history scoped to each store, including exhausted rolls.

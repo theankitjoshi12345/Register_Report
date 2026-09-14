@@ -51,11 +51,7 @@ export function Items({ name, title, values, onChange, errors }: {
 }) {
   return (
     <section aria-label={title} className="rounded-2xl border border-slate-200 p-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-semibold">{title}</h3>
-        <button type="button" aria-label={`Add ${title.toLowerCase()} amount`} onClick={() => onChange([...values, { amount: '', description: '' }])}
-          className={`${buttonClass} px-3 py-2 text-xs text-teal-800`}><Plus size={14} /> Add amount</button>
-      </div>
+      <h3 className="mb-4 font-semibold">{title}</h3>
       <FieldError name={name} errors={errors} />
       {name === 'bodega_ai_tickets' && <p className="mb-4 text-sm text-slate-600">Fill this up if anybody has charged any ticket.</p>}
       {name === 'tickets' && <p className="mb-4 text-sm text-slate-600">Choose <strong>+</strong> when a ticket is created for the customer and <strong>−</strong> when the customer pays the ticket.</p>}
@@ -80,6 +76,8 @@ export function Items({ name, title, values, onChange, errors }: {
           <FieldError name={`${name}.${index}`} errors={errors} />
         </div>
       ))}
+      <button type="button" aria-label={`Add ${title.toLowerCase()} amount`} onClick={() => onChange([...values, { amount: '', description: '' }])}
+        className={`${buttonClass} mt-2 w-full px-3 py-2 text-xs text-teal-800 sm:w-auto`}><Plus size={14} /> Add amount</button>
     </section>
   )
 }
