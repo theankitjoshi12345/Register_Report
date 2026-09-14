@@ -337,3 +337,7 @@ Makefile              Setup, development, and verification commands
 PERSONAL.md           Store requirements and product decisions
 PLAN.md               Implementation status and remaining product work
 ```
+
+## License
+
+This project is available under the [MIT License](LICENSE).
