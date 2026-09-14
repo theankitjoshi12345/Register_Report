@@ -334,6 +334,7 @@ api/index.py          Vercel Python Function entry point for Django
 scripts/setup.sh      Repeatable local dependency/database setup
 compose.yaml          Optional local PostgreSQL service
 Makefile              Setup, development, and verification commands
+ARCHITECTURE.md        Complete system design, data flow, formulas, and extension guide
 PERSONAL.md           Store requirements and product decisions
 PLAN.md               Implementation status and remaining product work
 ```
