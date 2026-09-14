@@ -9,6 +9,8 @@
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
 - Verifone Register Balance shown as sign-flipped currency so displayed `+`
   means over and `-` means short, while preserving the raw backend value.
+- Bodega AI Register Balance shown as signed currency where `+` means short and
+  `-` means over, with register-specific sign guidance in one shared result card.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Positive-only Bodega AI ticket adjustments with raw net-difference retention
   and an adjusted Register Balance in shift history and daily summaries.
@@ -20,7 +22,7 @@
 - Automatic daily summaries using the final terminal readings and combined shift
   register, scratch-off, phone-card, new-roll, and line-item totals.
 - Legacy-style daily summary presentation with register cards, reconciliation,
-  entered figures, separate line items, and per-slot scratch-off results.
+  raw entered figures, separate line items, and per-slot scratch-off results.
 - Recalculation of later reports following corrections/backdated entries, with
   atomic rollback for inconsistent history.
 - Normalized line items and scratch-off rows alongside calculation snapshots.

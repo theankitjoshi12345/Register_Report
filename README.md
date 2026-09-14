@@ -102,9 +102,11 @@ not extend the fifteen-minute window.
 
 The form has five steps: shift details, machine totals, scratch-off counters,
 Bodega AI figures, and Verifone figures. Monetary fields are required;
-explicit zero is accepted. Bodega's net difference may be negative. Bodega AI
-tickets, Verifone tickets, vendor payouts, and safe drops are optional lists
-with amounts and descriptions.
+explicit zero is accepted. Bodega's net difference may be positive or negative.
+Its sign selector uses `+` for short and `−` for over, with the same meaning
+retained by the calculated Bodega AI Register Balance. Bodega AI tickets,
+Verifone tickets, vendor payouts, and safe drops are optional lists with amounts
+and descriptions.
 Signed fields use a separate `+`/`−` selector so they work with mobile numeric
 keypads that do not provide a minus key.
 
@@ -118,8 +120,9 @@ Register Balance = entered Bodega net difference + Bodega AI Ticket Total
 ```
 
 An empty list contributes `$0.00`. Shift history and daily summaries present
-the adjusted value as **Register Balance**, while retaining the original net
-difference in the entered figures.
+the adjusted value in the **Register Balances** card, with an explicit `+` on
+positive values. The original net difference and ticket total remain in
+**Entered figures**, while calculated balances are not repeated there.
 
 A shift close covers activity since the previous shift. Scratch-off counters
 follow earlier shifts in creation order, including the final shift from the

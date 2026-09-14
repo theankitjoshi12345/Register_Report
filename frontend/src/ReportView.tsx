@@ -2,7 +2,7 @@ import { Check, CircleAlert, Pencil, Plus, WalletCards } from 'lucide-react'
 import { buttonClass, primaryClass } from './FormFields'
 import { fields, formFromReport, itemGroups, money } from './report'
 import type { Comparison, Report } from './report'
-import VerifoneBalance from './RegisterBalance'
+import VerifoneBalance, { BodegaBalance } from './RegisterBalance'
 
 function ComparisonRow({ label, value }: { label: string; value: Comparison }) {
   return (
@@ -39,9 +39,9 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
       {calculated.registers.gas_net_difference == null && <p role="status" className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This older report needs its card payment amount. Edit the report to complete the Verifone balance.</p>}
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-2xl bg-slate-950 p-5 text-white">
-          <h2 className="text-sm text-slate-300">Register balance</h2>
+          <h2 className="text-sm text-slate-300">Register Balances</h2>
           <dl className="mt-5 grid gap-4 min-[360px]:grid-cols-2">
-            <div className="min-w-0"><dt className="text-sm text-slate-400">Bodega AI Register Balance</dt><dd className="break-words text-xl font-bold sm:text-2xl">{money(calculated.registers.bodega_ai_register_balance ?? calculated.registers.bodega_net_difference)}</dd></div>
+            <div className="min-w-0"><dt className="text-sm text-slate-400">Bodega AI Register Balance</dt><dd className="break-words"><BodegaBalance value={calculated.registers.bodega_ai_register_balance ?? calculated.registers.bodega_net_difference} large /></dd></div>
             <div className="min-w-0"><dt className="text-sm text-slate-400">Verifone Register Balance</dt><dd className="break-words"><VerifoneBalance value={calculated.registers.gas_net_difference} large /></dd></div>
           </dl>
         </section>
@@ -77,7 +77,6 @@ export default function ReportView({ report, onEdit, onNew }: { report: Report; 
           <div><dt className="text-xs text-slate-500">Close name</dt><dd className="font-semibold">{report.close_label || 'None'}</dd></div>
           {fields.map(([key, label]) => <div className="min-w-0" key={key}><dt className="text-xs text-slate-500">{key === 'bodega_net_difference' ? 'Bodega net difference (entered)' : label}</dt><dd className="break-words font-semibold">{money(calculated.inputs[key])}</dd></div>)}
           <div className="min-w-0"><dt className="text-xs text-slate-500">Total Bodega AI ticket amount</dt><dd className="break-words font-semibold">{money(calculated.registers.bodega_ai_ticket_total ?? '0.00')}</dd></div>
-          <div className="min-w-0"><dt className="text-xs text-slate-500">Register Balance</dt><dd className="break-words font-semibold">{money(calculated.registers.bodega_ai_register_balance ?? calculated.registers.bodega_net_difference)}</dd></div>
         </dl>
         <div className="mt-7 grid gap-5 md:grid-cols-3">{itemGroups.map(({ key, title }) => (
           <section key={key} aria-label={`Entered ${title.toLowerCase()}`} className="rounded-xl bg-slate-50 p-4">

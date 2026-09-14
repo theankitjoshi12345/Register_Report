@@ -196,7 +196,7 @@ function App() {
   }
 
   const amountGroup = (group: readonly (readonly [AmountKey, string])[]) => (
-    <div className="grid gap-4 sm:grid-cols-2">{group.map(([key, label]) => <Amount key={key} name={key} label={label} value={form[key]} signed={key === 'bodega_net_difference'} onChange={(value) => update(key, value)} errors={errors} />)}</div>
+    <div className="grid gap-4 sm:grid-cols-2">{group.map(([key, label]) => <Amount key={key} name={key} label={label} value={form[key]} signed={key === 'bodega_net_difference'} helper={key === 'bodega_net_difference' ? "Use + if you're short and - if you're over." : undefined} onChange={(value) => update(key, value)} errors={errors} />)}</div>
   )
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-900">

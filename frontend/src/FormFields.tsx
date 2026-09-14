@@ -10,11 +10,12 @@ export function FieldError({ name, errors }: { name: string; errors: FieldErrors
   return message ? <p id={`${name}-error`} className="mt-2 text-sm text-rose-800">{message}</p> : null
 }
 
-export function Amount({ name, label, value, signed, explicitSign, strictlyPositive, onChange, errors }: {
-  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; strictlyPositive?: boolean; onChange: (value: string) => void; errors: FieldErrors
+export function Amount({ name, label, value, signed, explicitSign, strictlyPositive, helper, onChange, errors }: {
+  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; strictlyPositive?: boolean; helper?: string; onChange: (value: string) => void; errors: FieldErrors
 }) {
   const sign = value.trim().startsWith('-') ? '-' : '+'
   const magnitude = signed ? value.trim().replace(/^[+-]/, '') : value
+  const describedBy = [helper ? `${name}-help` : '', errors[name] ? `${name}-error` : ''].filter(Boolean).join(' ') || undefined
   const updateSignedValue = (nextSign: string, nextMagnitude: string) => {
     if (!nextMagnitude) {
       onChange(nextSign === '-' ? '-' : explicitSign ? '+' : '')
@@ -35,10 +36,11 @@ export function Amount({ name, label, value, signed, explicitSign, strictlyPosit
           <input id={name} name={name} required type="number" inputMode="decimal" step="0.01" min={strictlyPositive ? '0.01' : '0'}
             placeholder={signed ? '25.00' : undefined}
             value={magnitude} onChange={(event) => signed ? updateSignedValue(sign, event.target.value) : onChange(event.target.value)}
-            aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined}
+            aria-invalid={Boolean(errors[name])} aria-describedby={describedBy}
             className={`${inputClass} pl-7`} />
         </div>
       </div>
+      {helper && <p id={`${name}-help`} className="mt-2 text-xs text-slate-500">{helper}</p>}
       <FieldError name={name} errors={errors} />
     </div>
   )

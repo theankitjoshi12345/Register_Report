@@ -106,11 +106,16 @@ export const initialForm = (): FormState => ({
 })
 export const money = (value: string | null | undefined) => value == null ? 'Needs entry' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
 
+export function displayedBodegaBalance(value: string | null): string {
+  if (value == null) return 'Needs entry'
+  const numericValue = Number(value)
+  if (numericValue > 0) return `+${money(String(numericValue))}`
+  return money(String(numericValue))
+}
+
 export function displayedVerifoneBalance(value: string | null): string {
   if (value == null) return 'Needs entry'
-  const displayedValue = -Number(value)
-  if (displayedValue > 0) return `+${money(String(displayedValue))}`
-  return money(String(displayedValue))
+  return displayedBodegaBalance(String(-Number(value)))
 }
 
 export function formFromReport(report: Report): FormState {

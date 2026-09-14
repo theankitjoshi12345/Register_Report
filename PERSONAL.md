@@ -104,7 +104,8 @@ backend uses it for the shift and automatic day summary.
 
 At the end of each shift, this is the difference shown by the Bodega AI register.
 It can be positive or negative, so users must be able to enter either value.
-The entered value remains the original raw value.
+The entered value remains the original raw value. The sign selector uses `+` for
+short and `-` for over, and the form explains this directly below the input.
 
 An optional Bodega AI Ticket section appears with the net-difference entry. Its
 subtitle is: "Fill this up if anybody has charged any ticket." Users may add
@@ -120,7 +121,11 @@ Register Balance = Bodega AI Net Difference + Total Bodega AI Ticket Amount
 
 An empty ticket list has a total of `$0.00`, so the Register Balance equals the
 entered net difference. For example, `-$50.00 + $20.00 = -$30.00`, and
-`$5.00 + $20.00 = $25.00`.
+`$5.00 + $20.00 = $25.00`. Positive Bodega balances display with an explicit
+`+`; their helper reads `+ short / − over`. The Verifone display continues to
+flip the raw backend sign and uses `+ over / − short`. Calculated balances appear
+only in the **Register Balances** card; **Entered figures** keeps raw entries and
+the Bodega AI ticket total.
 
 ## What the owner enters for every shift close
 

@@ -25,7 +25,7 @@ globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0)
 const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
-const { displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const { displayedBodegaBalance, displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
@@ -69,6 +69,7 @@ function summaryFromReports(reports) {
   const gasBalance = gasBalances.some((value) => value == null)
     ? null
     : gasBalances.reduce((total, value) => total + Number(value), 0).toFixed(2)
+  const registerTotal = (key) => shifts.reduce((total, report) => total + Number(report.calculated.registers[key]), 0).toFixed(2)
   return [{
     report_date: latest.report_date, shift_count: shifts.length,
     shifts: shifts.map((report) => ({ id: report.id, close_label: report.close_label, created_at: report.created_at, terminal_sales: report.calculated.terminal.shift_sales, terminal_payout: report.calculated.terminal.shift_payout, scratch_off_sales: report.calculated.scratch_off.sales })),
@@ -76,7 +77,13 @@ function summaryFromReports(reports) {
     scratch_off: { sales: '15.00', total_new_rolls: 0, new_rolls_by_slot: {}, final_state: {}, slots: latest.calculated.scratch_off.slots ?? {} },
     inputs: Object.fromEntries(fields.map(([key]) => [key, latest.calculated.inputs[key]])),
     line_items: Object.fromEntries(itemGroups.map(({ key }) => [key, { total: '0.00', entries: [] }])),
-    registers: { lottery_sales: '0.00', lottery_payout: '0.00', bodega_net_difference: '0.00', bodega_ai_ticket_total: '0.00', bodega_ai_register_balance: '0.00', gas_net_difference: gasBalance },
+    registers: {
+      lottery_sales: '0.00', lottery_payout: '0.00',
+      bodega_net_difference: registerTotal('bodega_net_difference'),
+      bodega_ai_ticket_total: registerTotal('bodega_ai_ticket_total'),
+      bodega_ai_register_balance: registerTotal('bodega_ai_register_balance'),
+      gas_net_difference: gasBalance,
+    },
     comparisons: { phone_card_sales: matched, lottery_sales: matched, lottery_payout: matched },
   }]
 }
@@ -203,6 +210,8 @@ test('sign selectors support negative amounts without a minus key', async () => 
 test('Bodega AI tickets are optional, positive-only, and adjust Register Balance', async () => {
   await render()
   await click('Continue'); await fillVisible(); await click('Continue'); await click('Continue'); await fillVisible()
+  assert.match(container.textContent, /Use \+ if you're short and - if you're over\./)
+  assert.match(input('bodega_net_difference').getAttribute('aria-describedby'), /bodega_net_difference-help/)
   await enter('Bodega net difference sign', '-'); await enter('bodega_net_difference', '50')
   assert.match(container.textContent, /Fill this up if anybody has charged any ticket/)
   await click('Add bodega ai tickets amount')
@@ -216,27 +225,49 @@ test('Bodega AI tickets are optional, positive-only, and adjust Register Balance
     { amount: '10', description: 'Customer ticket' },
     { amount: '10', description: '' },
   ])
-  assert.match(container.textContent, /Register Balance/)
-  assert.match(container.textContent, /-\$30\.00/)
+  assert.match(container.textContent, /Register Balances/)
+  assert.ok(container.querySelector('[aria-label="-$30.00"]'))
+  assert.match(container.textContent, /\+ short \/ − over/)
   await click('Edit'); await click('Continue'); await click('Continue'); await click('Continue')
   assert.equal(input('bodega_ai_tickets.0.amount').value, '10')
   assert.equal(input('bodega_ai_tickets.0.description').value, 'Customer ticket')
 })
 
-test('Verifone Register Balance flips only its displayed currency sign', async () => {
+test('shift and daily reports share signed register balances without duplicating them in Entered figures', async () => {
+  assert.equal(displayedBodegaBalance('20.00'), '+$20.00')
+  assert.equal(displayedBodegaBalance('-15.00'), '-$15.00')
+  assert.equal(displayedBodegaBalance('0.00'), '$0.00')
   assert.equal(displayedVerifoneBalance('20.00'), '-$20.00')
   assert.equal(displayedVerifoneBalance('-20.00'), '+$20.00')
   assert.equal(displayedVerifoneBalance('0.00'), '$0.00')
 
-  const report = reportFromForm(completeForm({ close_label: 'Signed register' }))
-  report.calculated.registers.gas_net_difference = '-20.00'
+  const report = reportFromForm(completeForm({ close_label: 'Signed register', bodega_net_difference: '20.00' }))
+  report.calculated.registers.gas_net_difference = '-12.50'
   history = [report]
+  const balanceText = (label) => {
+    const term = [...container.querySelectorAll('dt')].find((element) => element.textContent === label)
+    assert.ok(term, `Missing balance: ${label}`)
+    return term.nextElementSibling.textContent
+  }
   await render()
   await click('2026-09-10Shift Signed register')
-  assert.ok(container.querySelector('[aria-label="+$20.00"]'))
-  assert.equal(report.calculated.registers.gas_net_difference, '-20.00')
+  assert.match(container.textContent, /Register Balances/)
+  assert.match(balanceText('Bodega AI Register Balance'), /^\+\$20\.00\+ short \/ − over$/)
+  assert.match(balanceText('Verifone Register Balance'), /^\+\$12\.50\+ over \/ − short$/)
+  assert.equal(report.calculated.registers.gas_net_difference, '-12.50')
+  let enteredFigures = [...container.querySelectorAll('section')].find((section) => section.querySelector('h2')?.textContent === 'Entered figures')
+  assert.ok(enteredFigures)
+  assert.match(enteredFigures.textContent, /Bodega net difference \(entered\).*\$20\.00/)
+  assert.match(enteredFigures.textContent, /Total Bodega AI ticket amount/)
+  assert.doesNotMatch(enteredFigures.textContent, /Register Balance/)
+
   await click('2026-09-10Daily summary · 1 shift')
-  assert.ok(container.querySelectorAll('[aria-label="+$20.00"]').length >= 2)
+  assert.match(container.textContent, /Register Balances/)
+  assert.match(balanceText('Bodega AI Register Balance'), /^\+\$20\.00\+ short \/ − over$/)
+  assert.match(balanceText('Verifone Register Balance'), /^\+\$12\.50\+ over \/ − short$/)
+  enteredFigures = [...container.querySelectorAll('section')].find((section) => section.querySelector('h2')?.textContent === 'Entered figures')
+  assert.ok(enteredFigures)
+  assert.doesNotMatch(enteredFigures.textContent, /Register Balance/)
   assert.doesNotMatch(container.textContent, /Short by|Over by|Balanced/)
 })
 
@@ -403,7 +434,7 @@ test('daily summaries are automatic and shift history still shows legacy missing
   assert.match(container.textContent, /Automatic day close/)
   assert.match(container.textContent, /Daily report for 2026-09-10/)
   assert.match(container.textContent, /Calculated from 1 shift/)
-  assert.match(container.textContent, /Register balance/)
+  assert.match(container.textContent, /Register Balances/)
   assert.match(container.textContent, /Reconciliation/)
   assert.match(container.textContent, /Entered figures/)
   assert.match(container.textContent, /Scratch-off entries/)
