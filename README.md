@@ -102,8 +102,9 @@ not extend the fifteen-minute window.
 
 The form has five steps: shift details, machine totals, scratch-off counters,
 Bodega AI figures, and Verifone figures. Monetary fields are required;
-they default to `0.00`, so a zero-activity shift can be saved without filling
-each amount manually. Bodega's net difference may be positive or negative.
+their boxes start empty and untouched boxes are submitted as `0.00`, so users
+can type immediately or save a zero-activity shift without filling each amount.
+Bodega's net difference may be positive or negative.
 Its sign selector uses `+` for short and `−` for over, with the same meaning
 retained by the calculated Bodega AI Register Balance. Bodega AI tickets,
 Verifone tickets, vendor payouts, and safe drops are optional lists with amounts

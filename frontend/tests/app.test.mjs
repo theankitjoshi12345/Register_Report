@@ -25,7 +25,7 @@ globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0)
 const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
-const { displayedBodegaBalance, displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const { amountOrZero, displayedBodegaBalance, displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
@@ -199,6 +199,7 @@ test('sign selectors support negative amounts without a minus key', async () => 
   await render(); await goToGas(); await fillVisible()
   await click('Add verifone tickets amount')
   assert.ok(input('tickets.0.amount').compareDocumentPosition(button('Add verifone tickets amount')) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING)
+  assert.equal(input('tickets.0.amount').required, true)
   assert.match(container.textContent, /Choose \+ when a ticket is created for the customer and − when the customer pays the ticket/)
   assert.doesNotMatch(container.textContent, /Phone card sales are prepaid phone cards/)
   await enter('Verifone tickets amount 1 sign', '-'); await enter('tickets.0.amount', '8.25')
@@ -207,10 +208,16 @@ test('sign selectors support negative amounts without a minus key', async () => 
   assert.equal(save.body.tickets[0].amount, '-8.25')
 })
 
-test('required numeric fields default to zero and an untouched shift can be saved', async () => {
-  assert.ok(fields.every(([key]) => initialForm()[key] === '0.00'))
+test('blank required report amounts stay easy to edit and submit as zero', async () => {
+  assert.ok(fields.every(([key]) => initialForm()[key] === ''))
+  assert.equal(amountOrZero(''), '0.00'); assert.equal(amountOrZero('+'), '0.00'); assert.equal(amountOrZero('-'), '0.00')
+  assert.equal(amountOrZero('12.50'), '12.50')
   await render()
-  await click('Continue'); await click('Continue'); await click('Continue'); await click('Continue'); await click('Save report')
+  await click('Continue')
+  assert.equal(input('lottery_terminal_sales').value, '')
+  assert.equal(input('lottery_terminal_sales').placeholder, '0.00')
+  assert.equal(input('lottery_terminal_sales').required, false)
+  await click('Continue'); await click('Continue'); await click('Continue'); await click('Save report')
   const save = requests.find((call) => call.method === 'POST' && call.url === '/api/reports/')
   assert.ok(save)
   for (const [key] of fields) assert.equal(save.body[key], '0.00')
@@ -454,6 +461,7 @@ test('daily summaries are automatic and shift history still shows legacy missing
   assert.match(container.textContent, /Needs entry/)
   await click('Edit'); await goToGas()
   assert.equal(input('gas_phone_card_sales').value, '12.00'); assert.equal(input('gas_card_payment_sales').value, '')
+  assert.equal(input('gas_card_payment_sales').required, true)
   await click('Save changes'); assert.match(currentStep(), /Verifone/)
 })
 

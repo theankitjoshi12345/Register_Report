@@ -273,8 +273,10 @@ its numeric conversion is only used for display formatting.
 ## 6. Report input contract
 
 Every new form starts with the current local business date, `close_type` set to
-`shift`, an empty optional label, required monetary fields set to `0.00`, empty
-line-item lists, and 20 scratch slots with zero new rolls.
+`shift`, an empty optional label, visually empty monetary fields, empty line-item
+lists, and 20 scratch slots with zero new rolls. Core amount boxes show a `0.00`
+placeholder and untouched blanks are normalized to `0.00` in the submitted JSON.
+Line-item amounts remain explicitly required.
 
 ### Required monetary fields
 
@@ -833,8 +835,9 @@ The form has five steps:
 4. Bodega AI inputs and optional tickets;
 5. Verifone inputs and optional line items.
 
-Native HTML constraint validation gates each step. Required numeric values start
-at zero, so a first zero-activity shift can be saved without repetitive typing.
+Native HTML constraint validation gates each step. Core amount boxes start empty
+and untouched values become zero only at submission, so users can type without
+first erasing `0.00` and can save a first zero-activity shift without repetitive typing.
 These defaults do not bypass history rules: a later shift must enter cumulative
 terminal readings at least as large as the preceding shift. Amount selectors
 provide signs separately because iPhone numeric keyboards may omit a minus key.

@@ -3,7 +3,8 @@
 ## Implemented
 
 - React/TypeScript/Tailwind form with five validated steps.
-- Zero defaults for required numeric fields, allowing an untouched zero-activity close.
+- Empty required amount boxes that submit as zero when untouched, allowing an
+  easy zero-activity close without making users erase a displayed default.
 - Shift closes, automatic daily summaries, report history, and editable saved reports.
 - History grouped by newest date, with daily reports before that date's shifts.
 - Lottery comparisons using scratch-off value plus terminal sales, independent

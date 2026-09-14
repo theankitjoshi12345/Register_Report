@@ -6,7 +6,7 @@ import { Amount, buttonClass, FieldError, inputClass, Items, primaryClass, Scrat
 import Header from './Header'
 import DailySummaryView from './DailySummaryView'
 import ReportView from './ReportView'
-import { bodegaAiTicketGroup, bodegaFields, errorStep, gasFields, independentFields, initialForm, verifoneItemGroups, formFromReport, steps } from './report'
+import { amountOrZero, bodegaAiTicketGroup, bodegaFields, errorStep, fields, gasFields, independentFields, initialForm, verifoneItemGroups, formFromReport, steps } from './report'
 import type { AmountKey, CatalogSlot, DailySummary, FieldErrors, FormState, Report, Session } from './report'
 
 function Login({ onLogin, busy }: { onLogin: (username: string, password: string) => void; busy: boolean }) {
@@ -45,6 +45,7 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false)
   const [reload, setReload] = useState(0)
   const [historyReload, setHistoryReload] = useState(0)
+  const [requiresExplicitCardPayment, setRequiresExplicitCardPayment] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const generation = useRef(0)
@@ -54,7 +55,7 @@ function App() {
 
   const reset = (date?: string) => {
     setForm({ ...initialForm(), ...(date ? { report_date: date } : {}) })
-    setStep(0); setEditing(null); setView(null); setSummaryView(null); setErrors({}); setError(''); setNotice('')
+    setStep(0); setEditing(null); setView(null); setSummaryView(null); setRequiresExplicitCardPayment(false); setErrors({}); setError(''); setNotice('')
   }
 
   useEffect(() => {
@@ -146,7 +147,7 @@ function App() {
   }
 
   const editReport = (report: Report) => {
-    setForm(formFromReport(report)); setEditing(report.id); setView(null); setSummaryView(null); setStep(0); setErrors({}); setError(''); setNotice('')
+    setForm(formFromReport(report)); setEditing(report.id); setView(null); setSummaryView(null); setRequiresExplicitCardPayment(report.calculated.inputs.gas_card_payment_sales == null); setStep(0); setErrors({}); setError(''); setNotice('')
   }
 
   const advance = () => { if (formRef.current?.reportValidity()) setStep((current) => Math.min(current + 1, steps.length - 1)) }
@@ -158,11 +159,12 @@ function App() {
     const currentGeneration = generation.current
     setSaving(true); setErrors({}); setError(''); setNotice('')
     const submittedScratch = form.scratch_offs.filter((row) => row.recorded !== false).map(({ slot_number, ending_number, new_roll_count }) => ({ slot_number, ending_number, new_roll_count: Number(new_roll_count) }))
+    const submittedAmounts = Object.fromEntries(fields.map(([key]) => [key, amountOrZero(form[key])]))
     const headers = { 'Content-Type': 'application/json', 'X-CSRFToken': session.csrfToken, 'X-Store-ID': String(storeId) }
     try {
       const saved = await request<Report>(editing ? `/api/reports/${editing}/` : '/api/reports/', {
         method: editing ? 'PATCH' : 'POST', headers,
-        body: JSON.stringify({ ...form, scratch_offs: submittedScratch }),
+        body: JSON.stringify({ ...form, ...submittedAmounts, scratch_offs: submittedScratch }),
       })
       if (generation.current !== currentGeneration) return
       setView(saved); setSummaryView(null); setEditing(null)
@@ -196,7 +198,7 @@ function App() {
   }
 
   const amountGroup = (group: readonly (readonly [AmountKey, string])[]) => (
-    <div className="grid gap-4 sm:grid-cols-2">{group.map(([key, label]) => <Amount key={key} name={key} label={label} value={form[key]} signed={key === 'bodega_net_difference'} helper={key === 'bodega_net_difference' ? "Use + if you're short and - if you're over." : undefined} onChange={(value) => update(key, value)} errors={errors} />)}</div>
+    <div className="grid gap-4 sm:grid-cols-2">{group.map(([key, label]) => <Amount key={key} name={key} label={label} value={form[key]} signed={key === 'bodega_net_difference'} blankMeansZero={key !== 'gas_card_payment_sales' || !requiresExplicitCardPayment} helper={key === 'bodega_net_difference' ? "Use + if you're short and - if you're over." : undefined} onChange={(value) => update(key, value)} errors={errors} />)}</div>
   )
   return (
     <div className="min-h-screen bg-[#f5f7f6] text-slate-900">

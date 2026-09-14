@@ -10,8 +10,8 @@ export function FieldError({ name, errors }: { name: string; errors: FieldErrors
   return message ? <p id={`${name}-error`} className="mt-2 text-sm text-rose-800">{message}</p> : null
 }
 
-export function Amount({ name, label, value, signed, explicitSign, strictlyPositive, helper, onChange, errors }: {
-  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; strictlyPositive?: boolean; helper?: string; onChange: (value: string) => void; errors: FieldErrors
+export function Amount({ name, label, value, signed, explicitSign, strictlyPositive, blankMeansZero, helper, onChange, errors }: {
+  name: string; label: string; value: string; signed?: boolean; explicitSign?: boolean; strictlyPositive?: boolean; blankMeansZero?: boolean; helper?: string; onChange: (value: string) => void; errors: FieldErrors
 }) {
   const sign = value.trim().startsWith('-') ? '-' : '+'
   const magnitude = signed ? value.trim().replace(/^[+-]/, '') : value
@@ -33,8 +33,8 @@ export function Amount({ name, label, value, signed, explicitSign, strictlyPosit
         </select>}
         <div className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">$</span>
-          <input id={name} name={name} required type="number" inputMode="decimal" step="0.01" min={strictlyPositive ? '0.01' : '0'}
-            placeholder={signed ? '25.00' : undefined}
+          <input id={name} name={name} required={!blankMeansZero} type="number" inputMode="decimal" step="0.01" min={strictlyPositive ? '0.01' : '0'}
+            placeholder={blankMeansZero ? '0.00' : signed ? '25.00' : undefined}
             value={magnitude} onChange={(event) => signed ? updateSignedValue(sign, event.target.value) : onChange(event.target.value)}
             aria-invalid={Boolean(errors[name])} aria-describedby={describedBy}
             className={`${inputClass} pl-7`} />

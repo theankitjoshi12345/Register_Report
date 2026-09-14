@@ -131,8 +131,8 @@ the Bodega AI ticket total.
 
 All of these items must be organized into steps:
 
-Required numeric fields default to zero so a zero-activity shift can be closed
-without manually filling every input.
+Required numeric boxes start empty so users can type immediately. An untouched
+box is submitted as zero, allowing a zero-activity shift without repetitive input.
 
 ### Independent items
 
