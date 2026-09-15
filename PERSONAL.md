@@ -123,7 +123,7 @@ An empty ticket list has a total of `$0.00`, so the Register Balance equals the
 entered net difference. For example, `-$50.00 + $20.00 = -$30.00`, and
 `$5.00 + $20.00 = $25.00`. Positive Bodega balances display with an explicit
 `+`; their helper reads `+ short / − over`. The Verifone display continues to
-flip the raw backend sign and uses `+ over / − short`. Calculated balances appear
+use the raw backend sign and uses the same `+ short / − over` convention. Calculated balances appear
 only in the **Register Balances** card; **Entered figures** keeps raw entries and
 the Bodega AI ticket total.
 

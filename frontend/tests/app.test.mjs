@@ -26,6 +26,7 @@ const { createElement, act } = await import('react')
 const { createRoot } = await import('react-dom/client')
 const { default: App } = await import(pathToFileURL(path.join(output, 'App.mjs')))
 const { amountOrZero, displayedBodegaBalance, displayedVerifoneBalance, initialForm, fields, itemGroups, localDate } = await import(pathToFileURL(path.join(output, 'report.mjs')))
+const reportSource = await readFile(path.join(frontend, 'src/report.ts'), 'utf8')
 
 const slots = Array.from({ length: 20 }, (_, index) => ({ slot_number: index + 1, ticket_price: '1.00', max_ticket_number: index === 0 ? 24 : 249 }))
 const signedIn = { user: { id: 1, username: 'owner' }, stores: [{ id: 1, name: 'Main store' }, { id: 2, name: 'Second store' }], csrfToken: 'signed-in-token' }
@@ -255,9 +256,10 @@ test('shift and daily reports share signed register balances without duplicating
   assert.equal(displayedBodegaBalance('20.00'), '+$20.00')
   assert.equal(displayedBodegaBalance('-15.00'), '-$15.00')
   assert.equal(displayedBodegaBalance('0.00'), '$0.00')
-  assert.equal(displayedVerifoneBalance('20.00'), '-$20.00')
-  assert.equal(displayedVerifoneBalance('-20.00'), '+$20.00')
+  assert.equal(displayedVerifoneBalance('20.00'), '+$20.00')
+  assert.equal(displayedVerifoneBalance('-20.00'), '-$20.00')
   assert.equal(displayedVerifoneBalance('0.00'), '$0.00')
+  assert.doesNotMatch(reportSource, /displayedVerifoneBalance[\s\S]{0,160}(?:-\s*Number|\*\s*-1|-1\s*\*)/)
 
   const report = reportFromForm(completeForm({ close_label: 'Signed register', bodega_net_difference: '20.00' }))
   report.calculated.registers.gas_net_difference = '-12.50'
@@ -271,7 +273,7 @@ test('shift and daily reports share signed register balances without duplicating
   await click('2026-09-10Shift Signed register')
   assert.match(container.textContent, /Register Balances/)
   assert.match(balanceText('Bodega AI Register Balance'), /^\+\$20\.00\+ short \/ − over$/)
-  assert.match(balanceText('Verifone Register Balance'), /^\+\$12\.50\+ over \/ − short$/)
+  assert.match(balanceText('Verifone Register Balance'), /^-\$12\.50\+ short \/ − over$/)
   assert.equal(report.calculated.registers.gas_net_difference, '-12.50')
   let enteredFigures = [...container.querySelectorAll('section')].find((section) => section.querySelector('h2')?.textContent === 'Entered figures')
   assert.ok(enteredFigures)
@@ -282,7 +284,7 @@ test('shift and daily reports share signed register balances without duplicating
   await click('2026-09-10Daily summary · 1 shift')
   assert.match(container.textContent, /Register Balances/)
   assert.match(balanceText('Bodega AI Register Balance'), /^\+\$20\.00\+ short \/ − over$/)
-  assert.match(balanceText('Verifone Register Balance'), /^\+\$12\.50\+ over \/ − short$/)
+  assert.match(balanceText('Verifone Register Balance'), /^-\$12\.50\+ short \/ − over$/)
   enteredFigures = [...container.querySelectorAll('section')].find((section) => section.querySelector('h2')?.textContent === 'Entered figures')
   assert.ok(enteredFigures)
   assert.doesNotMatch(enteredFigures.textContent, /Register Balance/)

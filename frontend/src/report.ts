@@ -115,8 +115,7 @@ export function displayedBodegaBalance(value: string | null): string {
 }
 
 export function displayedVerifoneBalance(value: string | null): string {
-  if (value == null) return 'Needs entry'
-  return displayedBodegaBalance(String(-Number(value)))
+  return displayedBodegaBalance(value)
 }
 
 export function formFromReport(report: Report): FormState {

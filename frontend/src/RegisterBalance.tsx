@@ -15,5 +15,5 @@ export function BodegaBalance({ value, large = false }: { value: string | null; 
 }
 
 export default function VerifoneBalance({ value, large = false }: { value: string | null; large?: boolean }) {
-  return <RegisterBalance value={value} helper="+ over / − short" large={large} format={displayedVerifoneBalance} />
+  return <RegisterBalance value={value} helper="+ short / − over" large={large} format={displayedVerifoneBalance} />
 }

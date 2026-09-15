@@ -10,10 +10,10 @@
 - Lottery comparisons using scratch-off value plus terminal sales, independent
   phone-card comparisons, and Verifone cash reconciliation.
 - Separate Verifone phone-card sales and independent debit/credit-card payments.
-- Verifone Register Balance shown as sign-flipped currency so displayed `+`
-  means over and `-` means short, while preserving the raw backend value.
+- Verifone Register Balance shown directly as signed currency so displayed `+`
+  means short and `-` means over, matching Bodega AI and preserving the raw value.
 - Bodega AI Register Balance shown as signed currency where `+` means short and
-  `-` means over, with register-specific sign guidance in one shared result card.
+  `-` means over, with shared sign guidance in one result card.
 - Decimal money validation, bounded ticket counters, and optional described line items.
 - Line-item add controls placed after existing rows so new entries appear beside the action.
 - Positive-only Bodega AI ticket adjustments with raw net-difference retention

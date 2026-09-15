@@ -542,16 +542,15 @@ Phone-card sales are separate and do not participate in this formula. A negative
 Verifone ticket amount is subtracted as a negative number and therefore adds to
 the result, matching a customer payment of an earlier ticket.
 
-The raw backend sign has the opposite meaning from the desired display. The
-frontend alone transforms it:
+The frontend displays the raw backend value directly:
 
 ```text
-displayed Verifone Register Balance = -1 × gas_net_difference
+displayed Verifone Register Balance = gas_net_difference
 ```
 
-Thus displayed `+` means over, displayed `-` means short, and zero is `$0.00`.
-The UI shows `+ over / − short` beneath the signed currency. It does not mutate
-the API value or database value.
+Thus displayed `+` means short, displayed `-` means over, and zero is `$0.00`.
+The UI shows `+ short / − over` beneath the signed currency, matching Bodega AI.
+It does not mutate the API value or database value.
 
 Old reports that predate the independent card-payment field store that field as
 `NULL`; their Verifone balance and related daily balance remain incomplete until
@@ -1268,9 +1267,8 @@ These rules should remain true after every change:
 8. Legacy day closes share the report table, cannot be newly created, and remain
    authoritative only for next-date scratch inventory.
 9. Reconciliation difference is always `actual - expected`.
-10. Bodega display signs mean `+ short / − over`.
-11. Verifone raw values remain unchanged; displayed values are negated and mean
-    `+ over / − short`.
+10. Both register display signs mean `+ short / − over`.
+11. Verifone raw values remain unchanged and are displayed directly.
 12. Missing historical values remain unknown instead of being guessed.
 13. Private API responses are never cacheable.
 14. Late requests from a previous user or store cannot populate current UI state.
