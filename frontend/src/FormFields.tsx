@@ -94,9 +94,10 @@ export function ScratchFields({ form, catalog, errors, onChange }: {
           ? 'Enter the last ticket sold at the end of the day and all new rolls added during the whole business day. Day closes compare with the previous business date, including when shifts were saved today.'
           : 'Enter the last ticket sold at the end of this shift and new rolls added during this shift. Counters compare with the previous shift today, or the previous business date for the first shift.'}
       </p>
-      <p className="mb-3 text-sm text-slate-600">Ending numbers must be whole numbers. 020 means ticket 020 was the last ticket sold; the remaining tickets start at 021. Leave the number empty when the roll sold out. Enter 0 new rolls when none were added.</p>
+      <p className="mb-3 text-sm text-slate-600">Ending numbers must be whole numbers. 020 means ticket 020 was the last ticket sold; the remaining tickets start at 021. Enter 0 new rolls when none were added.</p>
       <p className="mb-3 text-sm text-slate-600">If tonight's ending number is lower than the prior ending number, the report automatically counts one new roll unless you enter a larger number of new rolls.</p>
-      <p className="mb-5 text-sm text-slate-600">For a slot with no earlier reading, the starting counter defaults to 000. An ending counter of 006 therefore counts six ticket steps. An empty entry counts no sales.</p>
+      <p className="mb-3 text-sm text-slate-600">For a slot with no earlier reading, the starting counter defaults to 000 and an empty entry counts no sales. An ending counter of 006 therefore counts six ticket steps.</p>
+      <p className="mb-5 text-xs text-slate-500">Leave it empty if the roll is sold out.</p>
       <FieldError name="scratch_offs" errors={errors} />
       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 md:overflow-x-auto md:bg-white">
         <table className="block w-full text-left text-sm md:table md:min-w-[530px]">

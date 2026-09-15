@@ -156,6 +156,7 @@ test('five-step create, full entered figures, edit round-trip, and refreshed dep
   await enter('phone_card_actual_sales', '1.001'); await click('Continue'); assert.match(currentStep(), /Machine totals/)
   await enter('phone_card_actual_sales', '17.25'); await click('Continue')
   assert.match(currentStep(), /Scratch-off count/)
+  assert.match(container.textContent, /Leave it empty if the roll is sold out\./)
   await enter('scratch_offs.0.ending_number', '25'); await click('Continue'); assert.match(currentStep(), /Scratch-off count/)
   await enter('scratch_offs.0.ending_number', '4.5'); assert.equal(input('scratch_offs.0.ending_number').value, '25')
   await enter('scratch_offs.0.ending_number', '4')
